@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Icône Tsiky</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body{font-family:system-ui;background:#eef2ff;text-align:center;padding:20px}
+  canvas{border-radius:24px;margin:8px;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+  button{padding:12px 20px;margin:8px;border:none;border-radius:10px;background:#1d4ed8;color:#fff;font-size:16px;font-weight:700}
+  .mini{max-width:56px !important;border-radius:12px !important;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .rangee{display:flex;justify-content:center;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:10px 0}
+  .case{background:#fff;border-radius:14px;padding:14px 10px;width:100px}
+  .case p{margin:6px 0 0;font-size:11px;color:#64748b}
+  h3{color:#1e3a8a;margin-top:22px}
+</style>
+</head>
+<body>
+<h2>🎨 Icône officielle Tsiky</h2>
+<canvas id="c" width="512" height="512"></canvas>
+<div>
+  <button onclick="telecharger(512)">⬇️ icon-512.png</button>
+  <button onclick="telecharger(192)">⬇️ icon-192.png</button>
+</div>
+<h3>Aperçu sur un écran d'accueil 📱</h3>
+<div class="rangee">
+  <div class="case"><canvas class="mini" id="t96" width="96" height="96"></canvas><p>Taille réelle</p></div>
+  <div class="case"><canvas class="mini" id="t48" width="48" height="48"></canvas><p>Minuscule</p></div>
+</div>
+<script>
+function dessiner(ctx, T) {
+  const s = T / 512; // échelle
+  ctx.clearRect(0, 0, T, T);
+
+  // Fond : dégradé bleu vif -> bleu profond
+  const g = ctx.createLinearGradient(0, 0, T, T);
+  g.addColorStop(0, "#3b82f6");
+  g.addColorStop(1, "#1e40af");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(115*s, 0);
+  ctx.arcTo(T, 0, T, T, 115*s); ctx.arcTo(T, T, 0, T, 115*s);
+  ctx.arcTo(0, T, 0, 0, 115*s); ctx.arcTo(0, 0, T, 0, 115*s);
+  ctx.closePath(); ctx.fill();
+
+  // Halo lumineux derrière la bulle (profondeur)
+  const halo = ctx.createRadialGradient(T/2, T*0.42, 20*s, T/2, T*0.42, 230*s);
+  halo.addColorStop(0, "rgba(255,255,255,0.22)");
+  halo.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, T, T);
+
+  // Ombre douce sous la bulle
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.25)";
+  ctx.shadowBlur = 30*s;
+  ctx.shadowOffsetY = 14*s;
+
+  // Bulle blanche (rounded rect très arrondi)
+  const bx = 106*s, by = 118*s, bw = 300*s, bh = 240*s, r = 105*s;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(bx+r, by);
+  ctx.arcTo(bx+bw, by, bx+bw, by+bh, r);
+  ctx.arcTo(bx+bw, by+bh, bx, by+bh, r);
+  ctx.arcTo(bx, by+bh, bx, by, r);
+  ctx.arcTo(bx, by, bx+bw, by, r);
+  ctx.closePath(); ctx.fill();
+
+  // Queue de la bulle (courbée, pro)
+  ctx.beginPath();
+  ctx.moveTo(bx + 55*s, by + bh - 12*s);
+  ctx.quadraticCurveTo(bx + 30*s, by + bh + 60*s, bx + 18*s, by + bh + 78*s);
+  ctx.quadraticCurveTo(bx + 75*s, by + bh + 40*s, bx + 125*s, by + bh - 4*s);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Le sourire Tsiky 😊 (identité de la marque)
+  ctx.fillStyle = "#1e40af";
+  ctx.strokeStyle = "#1e40af";
+
+  // Yeux
+  const ey = by + bh*0.36;
+  ctx.beginPath(); ctx.arc(bx + bw*0.33, ey, 20*s, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(bx + bw*0.67, ey, 20*s, 0, Math.PI*2); ctx.fill();
+
+  // Bouche souriante
+  ctx.lineWidth = 26*s;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(bx + bw/2, by + bh*0.52, 68*s, 0.25*Math.PI, 0.75*Math.PI);
+  ctx.stroke();
+}
+
+const c = document.getElementById("c"), ctx = c.getContext("2d");
+dessiner(ctx, 512);
+dessiner(document.getElementById("t96").getContext("2d"), 96);
+dessiner(document.getElementById("t48").getContext("2d"), 48);
+
+function telecharger(taille) {
+  const tmp = document.createElement("canvas");
+  tmp.width = taille; tmp.height = taille;
+  dessiner(tmp.getContext("2d"), taille);
+  const a = document.createElement("a");
+  a.download = "icon-" + taille + ".png";
+  a.href = tmp.toDataURL("image/png");
+  a.click();
+}
+</script>
+</body>
+</html>
