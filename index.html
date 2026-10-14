@@ -34,6 +34,25 @@
   .popup { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; }
   .popup img { width: 100%; border-radius: 10px; margin-bottom: 10px; }
   .croix { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #334155; font-size: 15px; padding: 0; margin: 0; }
+  .entete { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+  .entete img, .rond-p { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+  .rond-p { background: #dbeafe; color: #1d4ed8; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; }
+  .entete .nom { flex: 1; font-weight: 700; color: #1e293b; }
+  .retour { background: none; font-size: 22px; padding: 0; margin: 0; width: auto; color: #1d4ed8; }
+  .zone-msgs { height: 50vh; overflow-y: auto; padding: 12px 2px; display: flex; flex-direction: column; gap: 8px; }
+  .bulle { max-width: 80%; padding: 9px 13px; border-radius: 14px; font-size: 15px; word-wrap: break-word; }
+  .bulle.autre { background: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .bulle.moi { background: #1d4ed8; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .bulle img { max-width: 100%; border-radius: 10px; display: block; margin-bottom: 4px; }
+  .heure { font-size: 10px; opacity: .7; text-align: right; margin-top: 3px; }
+  .barre-envoi { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .barre-envoi input { flex: 1; }
+  .barre-envoi button { width: auto; margin: 0; padding: 12px 16px; }
+  .contact-item { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+  .contact-item img, .contact-item .rond-p { width: 46px; height: 46px; }
+  .contact-item .infos { flex: 1; }
+  .contact-item .nom2 { font-weight: 700; color: #1e293b; font-size: 15px; }
+  .contact-item .tel2 { font-size: 12px; color: #64748b; }
 </style>
 </head>
 <body>
@@ -48,7 +67,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const app = document.getElementById("app");
 const zonePopup = document.getElementById("zonePopup");
-let user = null, monProfil = null;
+let user = null, monProfil = null, partenaireActuel = null, canal = null;
 
 /* ---------- Outils ---------- */
 function normaliserNumero(brut) {
@@ -81,6 +100,11 @@ function compresserImage(fichier, max = 400) {
   if (user) apresConnexion(); else afficherAuth();
 })();
 
+sb.auth.onAuthStateChange((_e, session) => {
+  user = session?.user ?? null;
+  if (!user) afficherAuth();
+});
+
 /* ---------- Écran : numéro + mot de passe ---------- */
 function afficherAuth() {
   app.innerHTML = `
@@ -105,10 +129,9 @@ async function lancerAuth(inscription) {
   if (!numero) { err.textContent = "Numéro invalide. Exemple : 034 00 000 00"; return; }
   if (mdp.length < 6) { err.textContent = "Mot de passe : 6 caractères minimum."; return; }
   err.textContent = "Un instant…";
-  const email = emailInvisible(numero);
   const { error } = inscription
-    ? await sb.auth.signUp({ email, password: mdp })
-    : await sb.auth.signInWithPassword({ email, password: mdp });
+    ? await sb.auth.signUp({ email: emailInvisible(numero), password: mdp })
+    : await sb.auth.signInWithPassword({ email: emailInvisible(numero), password: mdp });
   if (error) {
     err.textContent = error.message.includes("Invalid login credentials")
       ? "Numéro ou mot de passe incorrect."
@@ -131,10 +154,9 @@ async function apresConnexion() {
 /* ---------- Écran : création de profil ---------- */
 function afficherCreationProfil() {
   let fichier = null;
-  const numero = numeroDepuisCompte();
   app.innerHTML = `
     <h1>Bienvenue !</h1>
-    <p class="sous">Ton numéro : ${numero}</p>
+    <p class="sous">Ton numéro : ${numeroDepuisCompte()}</p>
     <div class="centre"><span class="rond" id="apercu">+</span></div>
     <input type="file" id="avatar" accept="image/*" hidden>
     <button id="btnPhoto" class="secondaire">📷 Choisir une photo</button>
@@ -160,26 +182,207 @@ function afficherCreationProfil() {
       if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
       avatar_url = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl;
     }
-    const { error } = await sb.from("profiles").insert({ id: user.id, pseudo, phone: numero, avatar_url });
+    const { error } = await sb.from("profiles").insert({ id: user.id, pseudo, phone: numeroDepuisCompte(), avatar_url });
     if (error) { err.textContent = error.message; return; }
-    accueil({ pseudo, phone: numero, avatar_url, role: "user" });
+    accueil({ pseudo, phone: numeroDepuisCompte(), avatar_url, role: "user" });
   };
+}
+
+/* ---------- Temps réel ---------- */
+function demarrerTempsReel() {
+  if (canal) return;
+  canal = sb.channel("tsiky-live")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages", filter: "receiver_id=eq." + user.id },
+      (p) => {
+        const m = p.new;
+        if (partenaireActuel && m.sender_id === partenaireActuel.id) {
+          ajouterBulle(m);
+          defilerBas();
+        }
+      })
+    .subscribe();
 }
 
 /* ---------- Accueil ---------- */
 function accueil(profil) {
   monProfil = profil;
+  partenaireActuel = null;
+  demarrerTempsReel();
   app.innerHTML = `
     <div class="centre">${profil.avatar_url ? `<img class="avatar" src="${profil.avatar_url}">` : `<span class="rond">${profil.pseudo[0].toUpperCase()}</span>`}</div>
     <h1>Salama, ${profil.pseudo} ! 🎉</h1>
     <div class="numero">📱 Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent !</div>
-    <button id="btnChat">💬 Commencer une discussion</button>
+    <button id="btnDisc">💬 Mes discussions</button>
+    <button id="btnNouvelle" class="secondaire">➕ Nouvelle discussion</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">⚙️ Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
-  btnChat.onclick = () => alert("Les discussions arrivent à la prochaine étape 😉");
+  btnDisc.onclick = afficherDiscussions;
+  btnNouvelle.onclick = afficherNouveauContact;
   if (profil.role === "admin") btnAdmin.onclick = afficherAdmin;
-  deco.onclick = () => sb.auth.signOut();
+  deco.onclick = async () => {
+    if (canal) { await sb.removeChannel(canal); canal = null; }
+    sb.auth.signOut();
+  };
   verifierAnnonce();
+}
+
+/* ---------- Liste des discussions ---------- */
+async function afficherDiscussions() {
+  partenaireActuel = null;
+  app.innerHTML = `
+    <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
+    <div id="listeDisc"><p style="color:#64748b;font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
+    <button id="btnNouveau">➕ Nouvelle discussion</button>`;
+  retourAcc.onclick = () => accueil(monProfil);
+  btnNouveau.onclick = afficherNouveauContact;
+  const { data: msgs } = await sb.from("messages")
+    .select("sender_id,receiver_id,created_at")
+    .or("sender_id.eq." + user.id + ",receiver_id.eq." + user.id)
+    .order("created_at", { ascending: false });
+  const ordre = [], vus = new Set();
+  (msgs || []).forEach(m => {
+    const pid = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+    if (!vus.has(pid)) { vus.add(pid); ordre.push(pid); }
+  });
+  const cont = document.getElementById("listeDisc");
+  if (!ordre.length) {
+    cont.innerHTML = `<p style="color:#64748b;font-size:14px;text-align:center;margin:20px 0">Aucune discussion.<br>Commence par un contact ! 👇</p>`;
+    return;
+  }
+  const { data: profs } = await sb.from("profiles").select("*").in("id", ordre);
+  cont.innerHTML = "";
+  ordre.forEach(pid => {
+    const p = (profs || []).find(x => x.id === pid);
+    if (!p) return;
+    const div = document.createElement("div");
+    div.className = "contact-item";
+    div.innerHTML = `
+      ${p.avatar_url ? `<img src="${p.avatar_url}">` : `<span class="rond-p">${p.pseudo[0].toUpperCase()}</span>`}
+      <div class="infos"><div class="nom2">${p.pseudo}</div><div class="tel2">${p.phone || ""}</div></div>`;
+    div.onclick = () => ouvrirConversation(p);
+    cont.appendChild(div);
+  });
+}
+
+/* ---------- Nouveau contact ---------- */
+function afficherNouveauContact() {
+  app.innerHTML = `
+    <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Nouvelle discussion</span></div>
+    <label>Numéro de ton ami</label>
+    <input id="numAmi" type="tel" placeholder="034 00 000 00">
+    <button id="btnChercher">🔍 Chercher</button>
+    <p class="erreur" id="err"></p>`;
+  retourAcc.onclick = () => accueil(monProfil);
+  btnChercher.onclick = async () => {
+    const err = document.getElementById("err");
+    err.textContent = "";
+    const num = normaliserNumero(document.getElementById("numAmi").value);
+    if (!num) { err.textContent = "Numéro invalide. Exemple : 034 00 000 00"; return; }
+    if (num === monProfil.phone) { err.textContent = "C'est ton propre numéro 😄"; return; }
+    err.textContent = "Recherche…";
+    const { data: p } = await sb.from("profiles").select("*").eq("phone", num).maybeSingle();
+    if (!p) { err.textContent = "Aucun compte Tsiky avec ce numéro. Dis-lui de s'inscrire !"; return; }
+    ouvrirConversation(p);
+  };
+}
+
+/* ---------- Conversation ---------- */
+async function ouvrirConversation(partenaire) {
+  partenaireActuel = partenaire;
+  const { data: bloc } = await sb.from("blocks").select("*")
+    .eq("blocker_id", user.id).eq("blocked_id", partenaire.id).maybeSingle();
+  const bloque = !!bloc;
+  app.innerHTML = `
+    <div class="entete">
+      <button class="retour" id="retourDisc">←</button>
+      ${partenaire.avatar_url ? `<img src="${partenaire.avatar_url}">` : `<span class="rond-p">${partenaire.pseudo[0].toUpperCase()}</span>`}
+      <span class="nom">${partenaire.pseudo}</span>
+      <button class="retour" id="btnBloc" title="Bloquer">${bloque ? "✅" : "🚫"}</button>
+    </div>
+    <div class="zone-msgs" id="zoneMsgs"><p style="color:#94a3b8;font-size:13px;text-align:center">Chargement…</p></div>
+    ${bloque
+      ? `<p class="erreur">Tu as bloqué ce contact. Débloque-le (✅) pour discuter.</p>`
+      : `<div class="barre-envoi">
+          <input id="txtMsg" placeholder="Écris ton message…">
+          <button id="btnPhotoM" title="Photo">📷</button>
+          <button id="btnEnvoyer">➤</button>
+        </div>
+        <input type="file" id="fichierMsg" accept="image/*" hidden>
+        <p class="erreur" id="errMsg"></p>`}`;
+  retourDisc.onclick = afficherDiscussions;
+  btnBloc.onclick = async () => {
+    if (bloque) {
+      await sb.from("blocks").delete().eq("blocker_id", user.id).eq("blocked_id", partenaire.id);
+    } else {
+      if (!confirm("Bloquer " + partenaire.pseudo + " ? Il ne pourra plus t'écrire.")) return;
+      await sb.from("blocks").insert({ blocker_id: user.id, blocked_id: partenaire.id });
+    }
+    ouvrirConversation(partenaire);
+  };
+  if (bloque) return;
+  const { data: msgs } = await sb.from("messages").select("*")
+    .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaire.id + "),and(sender_id.eq." + partenaire.id + ",receiver_id.eq." + user.id + ")")
+    .order("created_at");
+  document.getElementById("zoneMsgs").innerHTML = "";
+  (msgs || []).forEach(ajouterBulle);
+  defilerBas();
+  btnEnvoyer.onclick = envoyerTexte;
+  txtMsg.addEventListener("keydown", e => { if (e.key === "Enter") envoyerTexte(); });
+  btnPhotoM.onclick = () => fichierMsg.click();
+  fichierMsg.onchange = envoyerPhoto;
+}
+
+function ajouterBulle(m) {
+  const zone = document.getElementById("zoneMsgs");
+  if (!zone) return;
+  const div = document.createElement("div");
+  div.className = "bulle " + (m.sender_id === user.id ? "moi" : "autre");
+  const h = new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  let c = "";
+  if (m.media_type === "image" && m.media_url) c += `<img src="${m.media_url}">`;
+  if (m.content) c += `<div>${m.content.replace(/</g, "&lt;")}</div>`;
+  c += `<div class="heure">${h}</div>`;
+  div.innerHTML = c;
+  zone.appendChild(div);
+}
+
+function defilerBas() {
+  const zone = document.getElementById("zoneMsgs");
+  if (zone) zone.scrollTop = zone.scrollHeight;
+}
+
+async function envoyerTexte() {
+  const txt = document.getElementById("txtMsg");
+  const err = document.getElementById("errMsg");
+  const contenu = txt.value.trim();
+  if (!contenu) return;
+  txt.value = "";
+  const { data, error } = await sb.from("messages").insert({
+    sender_id: user.id, receiver_id: partenaireActuel.id, content: contenu
+  }).select().single();
+  if (error) { err.textContent = "Impossible d'envoyer — ce contact t'a peut-être bloqué."; return; }
+  ajouterBulle(data);
+  defilerBas();
+}
+
+async function envoyerPhoto() {
+  const f = document.getElementById("fichierMsg").files[0];
+  const err = document.getElementById("errMsg");
+  if (!f) return;
+  err.textContent = "Envoi de la photo…";
+  const chemin = user.id + "/msg_" + Date.now() + ".jpg";
+  const { error: errUp } = await sb.storage.from("fichiers")
+    .upload(chemin, await compresserImage(f, 800));
+  if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
+  const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
+  const { data, error } = await sb.from("messages").insert({
+    sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "image"
+  }).select().single();
+  if (error) { err.textContent = "Impossible d'envoyer."; return; }
+  err.textContent = "";
+  ajouterBulle(data);
+  defilerBas();
 }
 
 /* ---------- Popup pub (1 fois par jour max) ---------- */
