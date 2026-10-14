@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tsiky 💬</title>
- <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#1d4ed8">
 <style>
@@ -540,7 +540,32 @@ async function chargerListe() {
     };
   });
 }
+
+/* ---------- Service worker ( installation app 📲 ) ---------- */
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+/* ---------- Bouton d'installation 📲 ---------- */
+let installationDifferee = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installationDifferee = e;
+  afficherBoutonInstall();
+});
+
+function afficherBoutonInstall() {
+  if (!installationDifferee || document.getElementById("btnInstall")) return;
+  const b = document.createElement("button");
+  b.id = "btnInstall";
+  b.textContent = "📲 Installer Tsiky sur mon téléphone";
+  b.onclick = async () => {
+    installationDifferee.prompt();
+    await installationDifferee.userChoice;
+    installationDifferee = null;
+    b.remove();
+  };
+  const cible = document.getElementById("app");
+  if (cible) cible.prepend(b);
+}
 </script>
 </body>
 </html>
