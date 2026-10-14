@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#d9e4f2">
 <style>
-  :root, [data-theme="jour"]     --ligneCahier: rgba(47, 95, 196, 0.08);{
+  :root, [data-theme="jour"] {
     --fond: #d9e4f2;
     --carte: #edf3fa;
     --champ: #f8fbff;
@@ -24,8 +24,9 @@
     --banFond: #fdf6d8;
     --banBord: #ead98a;
     --banTxt: #6b5416;
+    --ligneCahier: rgba(47, 95, 196, 0.08);
   }
-  [data-theme="nuit"]     --ligneCahier: rgba(255, 255, 255, 0.05);{
+  [data-theme="nuit"] {
     --fond: #0f172a;
     --carte: #1c2740;
     --champ: #131d33;
@@ -41,6 +42,7 @@
     --banFond: #33290d;
     --banBord: #6b5416;
     --banTxt: #f3d98a;
+    --ligneCahier: rgba(255, 255, 255, 0.05);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; transition: background .25s, color .25s; }
@@ -401,7 +403,7 @@ function afficherPartage() {
 async function afficherDiscussions() {
   partenaireActuel = null;
   app.innerHTML = `
-    <div class="entete"><button class="btnBloc" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
+    <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
     <div id="listeDisc"><p style="color:var(--texte2);font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
     <button id="btnNouveau">➕ Nouvelle discussion</button>`;
   retourAcc.onclick = () => accueil(monProfil);
@@ -470,7 +472,7 @@ async function ouvrirConversation(partenaire) {
       <button class="retour" id="retourDisc">←</button>
       ${partenaire.avatar_url ? `<img src="${partenaire.avatar_url}">` : `<span class="rond-p">${partenaire.pseudo[0].toUpperCase()}</span>`}
       <span class="nom">${partenaire.pseudo}</span>
-      <button class="retour" id="btnBloc" title="Bloquer">${bloque ? "✅" : "🚫"}</button>
+      <button class="btnBloc" id="btnBloc" title="Bloquer">${bloque ? "✅" : "🚫"}</button>
     </div>
     <div class="zone-msgs" id="zoneMsgs"><p style="color:var(--texte2);font-size:13px;text-align:center">Chargement…</p></div>
     ${bloque
