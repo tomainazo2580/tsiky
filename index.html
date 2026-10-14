@@ -373,6 +373,7 @@ async function ouvrirConversation(partenaire) {
           <button id="btnEnvoyer">➤</button>
         </div>
         <input type="file" id="fichierMsg" accept="image/*" hidden>
+        <input type="file" id="fichierCam" accept="image/*" capture="environment" hidden>
         <p class="erreur" id="errMsg"></p>`}`;
   retourDisc.onclick = afficherDiscussions;
   btnBloc.onclick = async () => {
@@ -394,8 +395,26 @@ async function ouvrirConversation(partenaire) {
   marquerLu(partenaire.id);
   btnEnvoyer.onclick = envoyerTexte;
   txtMsg.addEventListener("keydown", e => { if (e.key === "Enter") envoyerTexte(); });
-  btnPhotoM.onclick = () => fichierMsg.click();
-  fichierMsg.onchange = envoyerPhoto;
+  btnPhotoM.onclick = choisirSourcePhoto;
+  fichierMsg.onchange = () => envoyerDepuis(fichierMsg);
+  fichierCam.onchange = () => envoyerDepuis(fichierCam);
+}
+
+/* ---------- Choix photo : caméra ou galerie 📸 ---------- */
+function choisirSourcePhoto() {
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup">
+      <h2 style="margin-bottom:2px">📸 Envoyer une photo</h2>
+      <button id="cCam">📷 Prendre une photo</button>
+      <button id="cGal" class="secondaire">🖼️ Choisir dans la galerie</button>
+      <button id="cAnn" class="secondaire">Annuler</button>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("cCam").onclick = () => { v.remove(); document.getElementById("fichierCam").click(); };
+  document.getElementById("cGal").onclick = () => { v.remove(); document.getElementById("fichierMsg").click(); };
+  document.getElementById("cAnn").onclick = () => v.remove();
 }
 
 function ajouterBulle(m) {
@@ -431,21 +450,22 @@ async function envoyerTexte() {
   defilerBas();
 }
 
-async function envoyerPhoto() {
-  const f = document.getElementById("fichierMsg").files[0];
+async function envoyerDepuis(input) {
+  const f = input.files[0];
   const err = document.getElementById("errMsg");
   if (!f) return;
-  err.textContent = "Envoi de la photo…";
+  if (err) err.textContent = "Envoi de la photo…";
   const chemin = user.id + "/msg_" + Date.now() + ".jpg";
   const { error: errUp } = await sb.storage.from("fichiers")
     .upload(chemin, await compresserImage(f, 800));
-  if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
+  if (errUp) { if (err) err.textContent = "Photo : " + errUp.message; return; }
   const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
   const { data, error } = await sb.from("messages").insert({
     sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "image"
   }).select().single();
-  if (error) { err.textContent = "Impossible d'envoyer."; return; }
-  err.textContent = "";
+  if (error) { if (err) err.textContent = "Impossible d'envoyer."; return; }
+  input.value = "";
+  if (err) err.textContent = "";
   ajouterBulle(data);
   defilerBas();
 }
@@ -581,7 +601,6 @@ function afficherBanniereInstall() {
   app.prepend(b);
 }
 
-/* Ré-affiche la bannière à chaque changement d'écran */
 new MutationObserver(() => afficherBanniereInstall())
   .observe(app, { childList: true });
 </script>
