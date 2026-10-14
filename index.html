@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tsiky 💬</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #eef2ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .card { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  h1 { color: #1e3a8a; text-align: center; margin-bottom: 4px; font-size: 26px; }
+  h2 { color: #1e3a8a; font-size: 17px; margin-top: 20px; }
+  .sous { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: #334155; margin: 12px 0 4px; font-weight: 600; }
+  input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; font-family: inherit; }
+  textarea { min-height: 70px; resize: vertical; }
+  button { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: #1d4ed8; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+  button.secondaire { background: #e2e8f0; color: #1e293b; }
+  button.mini { width: auto; padding: 7px 12px; font-size: 13px; margin: 0; }
+  .erreur { color: #dc2626; font-size: 14px; margin-top: 10px; text-align: center; }
+  .info { color: #16a34a; font-size: 14px; margin-top: 10px; text-align: center; }
+  .centre { text-align: center; margin: 10px 0; }
+  .avatar, .rond { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
+  .rond { background: #dbeafe; color: #1d4ed8; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; }
+  .numero { text-align: center; color: #475569; font-size: 14px; background: #f1f5f9; border-radius: 10px; padding: 8px; margin: 10px 0; }
+  .annonce { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-top: 10px; }
+  .annonce h3 { font-size: 15px; color: #1e3a8a; }
+  .annonce p { font-size: 13px; color: #64748b; margin: 4px 0; }
+  .ligne { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .on { background: #dcfce7; color: #16a34a; }
+  .off { background: #fee2e2; color: #dc2626; }
+  .voile { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 99; }
+  .popup { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; }
+  .popup img { width: 100%; border-radius: 10px; margin-bottom: 10px; }
+  .croix { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #334155; font-size: 15px; padding: 0; margin: 0; }
+</style>
+</head>
+<body>
+<div class="card" id="app">Chargement…</div>
+<div id="zonePopup"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://arkgysluldvprdxeplur.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ObfagnObPZY2qUEGNwKavg_8HWsgMsu";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const app = document.getElementById("app");
+const zonePopup = document.getElementById("zonePopup");
+let user = null, monProfil = null;
+
+/* ---------- Outils ---------- */
+function normaliserNumero(brut) {
+  let n = (brut || "").replace(/[\s.\-()]/g, "");
+  if (n.startsWith("+261")) n = n.slice(1);
+  else if (n.startsWith("0")) n = "261" + n.slice(1);
+  return /^261\d{9}$/.test(n) ? "+" + n : null;
+}
+const emailInvisible = (num) => num.replace("+", "") + "@tsiky.mg";
+const numeroDepuisCompte = () => "+" + (user.email || "").split("@")[0];
+
+function compresserImage(fichier, max = 400) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const e = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = img.width * e; c.height = img.height * e;
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => resolve(b), "image/jpeg", 0.8);
+    };
+    img.src = URL.createObjectURL(fichier);
+  });
+}
+
+/* ---------- Démarrage ---------- */
+(async () => {
+  const { data } = await sb.auth.getSession();
+  user = data.session?.user ?? null;
+  if (user) apresConnexion(); else afficherAuth();
+})();
+
+/* ---------- Écran : numéro + mot de passe ---------- */
+function afficherAuth() {
+  app.innerHTML = `
+    <h1>Tsiky 💬</h1>
+    <p class="sous">Le chat léger de Madagascar 🇲🇬</p>
+    <label>Ton numéro</label>
+    <input id="numero" type="tel" placeholder="034 00 000 00">
+    <label>Mot de passe</label>
+    <input id="mdp" type="password" placeholder="6 caractères minimum">
+    <button id="btnInscrire">Créer mon compte</button>
+    <button id="btnConnecter" class="secondaire">J'ai déjà un compte</button>
+    <p class="erreur" id="err"></p>`;
+  btnInscrire.onclick = () => lancerAuth(true);
+  btnConnecter.onclick = () => lancerAuth(false);
+}
+
+async function lancerAuth(inscription) {
+  const err = document.getElementById("err");
+  err.textContent = "";
+  const numero = normaliserNumero(document.getElementById("numero").value);
+  const mdp = document.getElementById("mdp").value;
+  if (!numero) { err.textContent = "Numéro invalide. Exemple : 034 00 000 00"; return; }
+  if (mdp.length < 6) { err.textContent = "Mot de passe : 6 caractères minimum."; return; }
+  err.textContent = "Un instant…";
+  const email = emailInvisible(numero);
+  const { error } = inscription
+    ? await sb.auth.signUp({ email, password: mdp })
+    : await sb.auth.signInWithPassword({ email, password: mdp });
+  if (error) {
+    err.textContent = error.message.includes("Invalid login credentials")
+      ? "Numéro ou mot de passe incorrect."
+      : error.message.includes("already")
+      ? "Ce numéro a déjà un compte. Utilise « J'ai déjà un compte »."
+      : error.message;
+    return;
+  }
+  const { data } = await sb.auth.getSession();
+  user = data.session?.user;
+  apresConnexion();
+}
+
+/* ---------- Après connexion ---------- */
+async function apresConnexion() {
+  const { data: profil } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!profil) afficherCreationProfil(); else accueil(profil);
+}
+
+/* ---------- Écran : création de profil ---------- */
+function afficherCreationProfil() {
+  let fichier = null;
+  const numero = numeroDepuisCompte();
+  app.innerHTML = `
+    <h1>Bienvenue !</h1>
+    <p class="sous">Ton numéro : ${numero}</p>
+    <div class="centre"><span class="rond" id="apercu">+</span></div>
+    <input type="file" id="avatar" accept="image/*" hidden>
+    <button id="btnPhoto" class="secondaire">📷 Choisir une photo</button>
+    <label>Ton pseudo</label>
+    <input id="pseudo" placeholder="Ex : Hery">
+    <button id="btnOk">C'est parti ✅</button>
+    <p class="erreur" id="err"></p>`;
+  const inputAvatar = document.getElementById("avatar");
+  btnPhoto.onclick = () => inputAvatar.click();
+  inputAvatar.onchange = () => {
+    fichier = inputAvatar.files[0];
+    if (fichier) apercu.outerHTML = `<img class="avatar" id="apercu" src="${URL.createObjectURL(fichier)}">`;
+  };
+  btnOk.onclick = async () => {
+    const err = document.getElementById("err");
+    const pseudo = document.getElementById("pseudo").value.trim();
+    if (pseudo.length < 2) { err.textContent = "Choisis un pseudo."; return; }
+    err.textContent = "Enregistrement…";
+    let avatar_url = null;
+    if (fichier) {
+      const chemin = `${user.id}/avatar.jpg`;
+      const { error: errUp } = await sb.storage.from("avatars").upload(chemin, await compresserImage(fichier), { upsert: true });
+      if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
+      avatar_url = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl;
+    }
+    const { error } = await sb.from("profiles").insert({ id: user.id, pseudo, phone: numero, avatar_url });
+    if (error) { err.textContent = error.message; return; }
+    accueil({ pseudo, phone: numero, avatar_url, role: "user" });
+  };
+}
+
+/* ---------- Accueil ---------- */
+function accueil(profil) {
+  monProfil = profil;
+  app.innerHTML = `
+    <div class="centre">${profil.avatar_url ? `<img class="avatar" src="${profil.avatar_url}">` : `<span class="rond">${profil.pseudo[0].toUpperCase()}</span>`}</div>
+    <h1>Salama, ${profil.pseudo} ! 🎉</h1>
+    <div class="numero">📱 Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent !</div>
+    <button id="btnChat">💬 Commencer une discussion</button>
+    ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">⚙️ Espace admin</button>` : ""}
+    <button id="deco" class="secondaire">Se déconnecter</button>`;
+  btnChat.onclick = () => alert("Les discussions arrivent à la prochaine étape 😉");
+  if (profil.role === "admin") btnAdmin.onclick = afficherAdmin;
+  deco.onclick = () => sb.auth.signOut();
+  verifierAnnonce();
+}
+
+/* ---------- Popup pub (1 fois par jour max) ---------- */
+async function verifierAnnonce() {
+  const { data } = await sb.from("annonces").select("*").eq("actif", true)
+    .order("created_at", { ascending: false }).limit(1);
+  if (!data || !data.length) return;
+  const a = data[0];
+  const vu = JSON.parse(localStorage.getItem("tsiky_pub_vu") || "{}");
+  if (vu.id === a.id && vu.jour === new Date().toDateString()) return;
+  zonePopup.innerHTML = `
+    <div class="voile">
+      <div class="popup">
+        <button class="croix" id="fermerPub">✕</button>
+        ${a.image_url ? `<img src="${a.image_url}">` : ""}
+        <h2>${a.titre}</h2>
+        <p style="color:#334155;font-size:15px;margin:8px 0 12px">${a.message}</p>
+        ${a.lien ? `<button id="btnLien">Découvrir 🔗</button>` : ""}
+      </div>
+    </div>`;
+  fermerPub.onclick = () => {
+    zonePopup.innerHTML = "";
+    localStorage.setItem("tsiky_pub_vu", JSON.stringify({ id: a.id, jour: new Date().toDateString() }));
+  };
+  if (a.lien) btnLien.onclick = () => window.open(a.lien, "_blank");
+}
+
+/* ---------- Espace admin ---------- */
+function afficherAdmin() {
+  app.innerHTML = `
+    <h1>⚙️ Admin</h1>
+    <p class="sous">Crée et gère tes annonces</p>
+    <label>Titre</label>
+    <input id="aTitre" placeholder="Ex : Découvre Namako !">
+    <label>Message</label>
+    <textarea id="aMessage" placeholder="Révise plus intelligemment pour le BEPC…"></textarea>
+    <label>Image (optionnel)</label>
+    <input id="aImage" type="file" accept="image/*">
+    <label>Lien à ouvrir (optionnel)</label>
+    <input id="aLien" type="url" placeholder="https://namako.workers.dev">
+    <button id="btnPublier">📢 Publier l'annonce</button>
+    <p class="erreur" id="err"></p>
+    <p class="info" id="ok"></p>
+    <h2>Annonces existantes</h2>
+    <div id="liste"><p style="color:#64748b;font-size:14px">Chargement…</p></div>
+    <button id="retour" class="secondaire">← Retour</button>`;
+  btnPublier.onclick = publierAnnonce;
+  retour.onclick = () => accueil(monProfil);
+  chargerListe();
+}
+
+async function publierAnnonce() {
+  const err = document.getElementById("err");
+  const titre = aTitre.value.trim(), message = aMessage.value.trim();
+  if (!titre || !message) { err.textContent = "Titre et message obligatoires."; return; }
+  err.textContent = "Publication…";
+  let image_url = null;
+  if (aImage.files[0]) {
+    const chemin = `${user.id}/annonce_${Date.now()}.jpg`;
+    const { error: errUp } = await sb.storage.from("pubs").upload(chemin, await compresserImage(aImage.files[0], 600), { upsert: true });
+    if (errUp) { err.textContent = "Image : " + errUp.message; return; }
+    image_url = sb.storage.from("pubs").getPublicUrl(chemin).data.publicUrl;
+  }
+  const { error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null });
+  if (error) { err.textContent = error.message; return; }
+  document.getElementById("ok").textContent = "Annonce publiée ✅";
+  aTitre.value = ""; aMessage.value = ""; aLien.value = ""; aImage.value = "";
+  err.textContent = "";
+  chargerListe();
+}
+
+async function chargerListe() {
+  const { data } = await sb.from("annonces").select("*").order("created_at", { ascending: false });
+  liste.innerHTML = data?.length ? "" : `<p style="color:#64748b;font-size:14px">Aucune annonce pour l'instant.</p>`;
+  data?.forEach(a => {
+    const div = document.createElement("div");
+    div.className = "annonce";
+    div.innerHTML = `
+      <h3>${a.titre}</h3>
+      <p>${a.message}</p>
+      <div class="ligne">
+        <span class="badge ${a.actif ? "on" : "off"}">${a.actif ? "ACTIVE" : "MASQUÉE"}</span>
+        <button class="mini secondaire" id="tg-${a.id}">${a.actif ? "Masquer" : "Activer"}</button>
+        <button class="mini secondaire" id="del-${a.id}">🗑️</button>
+      </div>`;
+    liste.appendChild(div);
+    document.getElementById("tg-" + a.id).onclick = async () => {
+      await sb.from("annonces").update({ actif: !a.actif }).eq("id", a.id);
+      chargerListe();
+    };
+    document.getElementById("del-" + a.id).onclick = async () => {
+      if (confirm("Supprimer cette annonce ?")) { await sb.from("annonces").delete().eq("id", a.id); chargerListe(); }
+    };
+  });
+}
+</script>
+</body>
+</html>
