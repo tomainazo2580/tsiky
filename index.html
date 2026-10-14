@@ -1,71 +1,107 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="jour">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tsiky 💬</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#1d4ed8">
+<meta name="theme-color" content="#d9e4f2">
 <style>
+  :root, [data-theme="jour"] {
+    --fond: #d9e4f2;
+    --carte: #edf3fa;
+    --champ: #f8fbff;
+    --texte: #1e293b;
+    --texte2: #5b6b82;
+    --bordure: #bccfe6;
+    --primaire: #2f5fc4;
+    --secondaire: #dbe6f3;
+    --bulleMoi: #2f5fc4;
+    --bulleAutre: #d7e3f2;
+    --erreur: #c92a2a;
+    --ok: #2b8a3e;
+    --banFond: #fdf6d8;
+    --banBord: #ead98a;
+    --banTxt: #6b5416;
+  }
+  [data-theme="nuit"] {
+    --fond: #0f172a;
+    --carte: #1c2740;
+    --champ: #131d33;
+    --texte: #e2e8f0;
+    --texte2: #93a5be;
+    --bordure: #33415c;
+    --primaire: #4a7de0;
+    --secondaire: #2a3a5c;
+    --bulleMoi: #3563c2;
+    --bulleAutre: #2a3a5c;
+    --erreur: #ff8787;
+    --ok: #69db7c;
+    --banFond: #33290d;
+    --banBord: #6b5416;
+    --banTxt: #f3d98a;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #eef2ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .card { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
-  h1 { color: #1e3a8a; text-align: center; margin-bottom: 4px; font-size: 26px; }
-  h2 { color: #1e3a8a; font-size: 17px; margin-top: 20px; }
-  .sous { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 16px; }
-  label { display: block; font-size: 13px; color: #334155; margin: 12px 0 4px; font-weight: 600; }
-  input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; font-family: inherit; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; transition: background .25s, color .25s; }
+  .card { background: var(--carte); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.10); }
+  h1 { color: var(--primaire); text-align: center; margin-bottom: 4px; font-size: 26px; }
+  h2 { color: var(--primaire); font-size: 17px; margin-top: 20px; }
+  .sous { text-align: center; color: var(--texte2); font-size: 14px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: var(--texte); margin: 12px 0 4px; font-weight: 600; }
+  input, textarea { width: 100%; padding: 12px; border: 1px solid var(--bordure); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--champ); color: var(--texte); }
   textarea { min-height: 70px; resize: vertical; }
-  button { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: #1d4ed8; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
-  button.secondaire { background: #e2e8f0; color: #1e293b; }
+  button { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: var(--primaire); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+  button.secondaire { background: var(--secondaire); color: var(--texte); }
   button.mini { width: auto; padding: 7px 12px; font-size: 13px; margin: 0; }
-  .erreur { color: #dc2626; font-size: 14px; margin-top: 10px; text-align: center; }
-  .info { color: #16a34a; font-size: 14px; margin-top: 10px; text-align: center; }
+  .erreur { color: var(--erreur); font-size: 14px; margin-top: 10px; text-align: center; }
+  .info { color: var(--ok); font-size: 14px; margin-top: 10px; text-align: center; }
   .centre { text-align: center; margin: 10px 0; }
   .avatar, .rond { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
-  .rond { background: #dbeafe; color: #1d4ed8; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; }
-  .numero { text-align: center; color: #475569; font-size: 14px; background: #f1f5f9; border-radius: 10px; padding: 8px; margin: 10px 0; }
-  .annonce { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-top: 10px; }
-  .annonce h3 { font-size: 15px; color: #1e3a8a; }
-  .annonce p { font-size: 13px; color: #64748b; margin: 4px 0; }
+  .rond { background: var(--bulleAutre); color: var(--primaire); display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; }
+  .numero { text-align: center; color: var(--texte2); font-size: 14px; background: var(--champ); border-radius: 10px; padding: 8px; margin: 10px 0; }
+  .annonce { border: 1px solid var(--bordure); border-radius: 12px; padding: 12px; margin-top: 10px; }
+  .annonce h3 { font-size: 15px; color: var(--primaire); }
+  .annonce p { font-size: 13px; color: var(--texte2); margin: 4px 0; }
   .ligne { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
-  .on { background: #dcfce7; color: #16a34a; }
-  .off { background: #fee2e2; color: #dc2626; }
-  .voile { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 99; }
-  .popup { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; }
+  .on { background: rgba(43,138,62,.18); color: var(--ok); }
+  .off { background: rgba(201,42,42,.15); color: var(--erreur); }
+  .voile { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 99; }
+  .popup { background: var(--carte); color: var(--texte); border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; }
   .popup img { width: 100%; border-radius: 10px; margin-bottom: 10px; }
-  .croix { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #334155; font-size: 15px; padding: 0; margin: 0; }
-  .entete { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+  .croix { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: var(--champ); color: var(--texte2); font-size: 15px; padding: 0; margin: 0; }
+  .entete { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--bordure); }
   .entete img, .rond-p { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
-  .rond-p { background: #dbeafe; color: #1d4ed8; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; }
-  .entete .nom { flex: 1; font-weight: 700; color: #1e293b; }
-  .retour { background: none; font-size: 22px; padding: 0; margin: 0; width: auto; color: #1d4ed8; }
+  .rond-p { background: var(--bulleAutre); color: var(--primaire); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; }
+  .entete .nom { flex: 1; font-weight: 700; color: var(--texte); }
+  .retour { background: none; font-size: 22px; padding: 0; margin: 0; width: auto; color: var(--primaire); }
   .zone-msgs { height: 50vh; overflow-y: auto; padding: 12px 2px; display: flex; flex-direction: column; gap: 8px; }
   .bulle { max-width: 80%; padding: 9px 13px; border-radius: 14px; font-size: 15px; word-wrap: break-word; }
-  .bulle.autre { background: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 4px; }
-  .bulle.moi { background: #1d4ed8; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .bulle.autre { background: var(--bulleAutre); color: var(--texte); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .bulle.moi { background: var(--bulleMoi); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
   .bulle img { max-width: 100%; border-radius: 10px; display: block; margin-bottom: 4px; }
-  .heure { font-size: 10px; opacity: .7; text-align: right; margin-top: 3px; }
+  .heure { font-size: 10px; opacity: .75; text-align: right; margin-top: 3px; }
   .barre-envoi { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
   .barre-envoi input { flex: 1; }
   .barre-envoi button { width: auto; margin: 0; padding: 12px 16px; }
-  .contact-item { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+  .contact-item { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid var(--bordure); cursor: pointer; }
   .contact-item img, .contact-item .rond-p { width: 46px; height: 46px; }
   .contact-item .infos { flex: 1; }
-  .contact-item .nom2 { font-weight: 700; color: #1e293b; font-size: 15px; }
-  .contact-item .tel2 { font-size: 12px; color: #64748b; }
-  .pastille { display: inline-block; min-width: 22px; padding: 2px 7px; margin-left: 6px; border-radius: 99px; background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; text-align: center; }
-  #banniereInstall { background: #fef9c3; border: 1px solid #fde047; border-radius: 12px; padding: 12px; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
-  #banniereInstall .txt { flex: 1; font-size: 14px; color: #713f12; }
+  .contact-item .nom2 { font-weight: 700; color: var(--texte); font-size: 15px; }
+  .contact-item .tel2 { font-size: 12px; color: var(--texte2); }
+  .pastille { display: inline-block; min-width: 22px; padding: 2px 7px; margin-left: 6px; border-radius: 99px; background: #e03131; color: #fff; font-size: 12px; font-weight: 700; text-align: center; }
+  #banniereInstall { background: var(--banFond); border: 1px solid var(--banBord); border-radius: 12px; padding: 12px; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
+  #banniereInstall .txt { flex: 1; font-size: 14px; color: var(--banTxt); }
   #banniereInstall button { width: auto; margin: 0; padding: 9px 16px; font-size: 14px; }
-  #qrBox { display: flex; justify-content: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin: 12px 0; }
+  #qrBox { display: flex; justify-content: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid var(--bordure); margin: 12px 0; }
   #qrBox img, #qrBox canvas { width: 240px !important; height: 240px !important; }
-  .lienApp { font-size: 12px; color: #64748b; word-break: break-all; margin-bottom: 12px; }
+  .lienApp { font-size: 12px; color: var(--texte2); word-break: break-all; margin-bottom: 12px; }
+  #btnTheme { position: fixed; top: 12px; right: 12px; width: 44px; height: 44px; margin: 0; padding: 0; border-radius: 50%; font-size: 20px; z-index: 97; background: var(--carte); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 </style>
 </head>
 <body>
+<button id="btnTheme" title="Mode jour / nuit">🌙</button>
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 
@@ -81,7 +117,21 @@ const zonePopup = document.getElementById("zonePopup");
 let user = null, monProfil = null, partenaireActuel = null, canal = null;
 let nonLus = {};
 
-const URL_APP = location.origin + location.pathname;
+const URL_APP = location.origin + location.pathname.replace(/index\.html$/, "");
+
+/* ---------- Thème jour / nuit 🌙 ---------- */
+function appliquerTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("tsiky_theme", theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "nuit" ? "#0f172a" : "#d9e4f2");
+  document.getElementById("btnTheme").textContent = theme === "nuit" ? "☀️" : "🌙";
+}
+appliquerTheme(localStorage.getItem("tsiky_theme")
+  || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "nuit" : "jour"));
+document.getElementById("btnTheme").onclick = () => {
+  appliquerTheme(document.documentElement.getAttribute("data-theme") === "nuit" ? "jour" : "nuit");
+};
 
 /* ---------- Outils ---------- */
 function normaliserNumero(brut) {
@@ -305,7 +355,7 @@ function afficherPartage() {
     <div class="popup">
       <button class="croix" id="pFermer">✕</button>
       <h2 style="margin-bottom:6px">Partager Tsiky 💬</h2>
-      <p style="font-size:14px;color:#475569">Ton ami scanne ce QR Code avec l'appareil photo de son téléphone : Tsiky s'ouvre et il peut s'inscrire.</p>
+      <p style="font-size:14px;color:var(--texte2)">Ton ami scanne ce QR Code avec l'appareil photo de son téléphone : Tsiky s'ouvre et il peut s'inscrire.</p>
       <div id="qrBox"></div>
       <div class="lienApp">${URL_APP}</div>
       <button id="pCopier">📋 Copier le lien</button>
@@ -323,7 +373,7 @@ function afficherPartage() {
       correctLevel: QRCode.CorrectLevel.M
     });
   } else {
-    document.getElementById("qrBox").innerHTML = `<p style="font-size:13px;color:#dc2626">QR indisponible — copie le lien ci-dessous.</p>`;
+    document.getElementById("qrBox").innerHTML = `<p style="font-size:13px;color:var(--erreur)">QR indisponible — copie le lien ci-dessous.</p>`;
   }
 
   document.getElementById("pCopier").onclick = async () => {
@@ -351,7 +401,7 @@ async function afficherDiscussions() {
   partenaireActuel = null;
   app.innerHTML = `
     <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
-    <div id="listeDisc"><p style="color:#64748b;font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
+    <div id="listeDisc"><p style="color:var(--texte2);font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
     <button id="btnNouveau">➕ Nouvelle discussion</button>`;
   retourAcc.onclick = () => accueil(monProfil);
   btnNouveau.onclick = afficherNouveauContact;
@@ -367,7 +417,7 @@ async function afficherDiscussions() {
   });
   const cont = document.getElementById("listeDisc");
   if (!ordre.length) {
-    cont.innerHTML = `<p style="color:#64748b;font-size:14px;text-align:center;margin:20px 0">Aucune discussion.<br>Commence par un contact ! 👇</p>`;
+    cont.innerHTML = `<p style="color:var(--texte2);font-size:14px;text-align:center;margin:20px 0">Aucune discussion.<br>Commence par un contact ! 👇</p>`;
     return;
   }
   const { data: profs } = await sb.from("profiles").select("*").in("id", ordre);
@@ -421,7 +471,7 @@ async function ouvrirConversation(partenaire) {
       <span class="nom">${partenaire.pseudo}</span>
       <button class="retour" id="btnBloc" title="Bloquer">${bloque ? "✅" : "🚫"}</button>
     </div>
-    <div class="zone-msgs" id="zoneMsgs"><p style="color:#94a3b8;font-size:13px;text-align:center">Chargement…</p></div>
+    <div class="zone-msgs" id="zoneMsgs"><p style="color:var(--texte2);font-size:13px;text-align:center">Chargement…</p></div>
     ${bloque
       ? `<p class="erreur">Tu as bloqué ce contact. Débloque-le (✅) pour discuter.</p>`
       : `<div class="barre-envoi">
@@ -541,7 +591,7 @@ async function verifierAnnonce() {
         <button class="croix" id="fermerPub">✕</button>
         ${a.image_url ? `<img src="${a.image_url}">` : ""}
         <h2>${a.titre}</h2>
-        <p style="color:#334155;font-size:15px;margin:8px 0 12px">${a.message}</p>
+        <p style="color:var(--texte);font-size:15px;margin:8px 0 12px">${a.message}</p>
         ${a.lien ? `<button id="btnLien">Découvrir 🔗</button>` : ""}
       </div>
     </div>`;
@@ -569,7 +619,7 @@ function afficherAdmin() {
     <p class="erreur" id="err"></p>
     <p class="info" id="ok"></p>
     <h2>Annonces existantes</h2>
-    <div id="liste"><p style="color:#64748b;font-size:14px">Chargement…</p></div>
+    <div id="liste"><p style="color:var(--texte2);font-size:14px">Chargement…</p></div>
     <button id="retour" class="secondaire">← Retour</button>`;
   btnPublier.onclick = publierAnnonce;
   retour.onclick = () => accueil(monProfil);
@@ -598,7 +648,7 @@ async function publierAnnonce() {
 
 async function chargerListe() {
   const { data } = await sb.from("annonces").select("*").order("created_at", { ascending: false });
-  liste.innerHTML = data?.length ? "" : `<p style="color:#64748b;font-size:14px">Aucune annonce pour l'instant.</p>`;
+  liste.innerHTML = data?.length ? "" : `<p style="color:var(--texte2);font-size:14px">Aucune annonce pour l'instant.</p>`;
   data?.forEach(a => {
     const div = document.createElement("div");
     div.className = "annonce";
