@@ -53,6 +53,7 @@
   .contact-item .infos { flex: 1; }
   .contact-item .nom2 { font-weight: 700; color: #1e293b; font-size: 15px; }
   .contact-item .tel2 { font-size: 12px; color: #64748b; }
+  .pastille { display: inline-block; min-width: 22px; padding: 2px 7px; margin-left: 6px; border-radius: 99px; background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; text-align: center; }
 </style>
 </head>
 <body>
@@ -68,6 +69,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = document.getElementById("app");
 const zonePopup = document.getElementById("zonePopup");
 let user = null, monProfil = null, partenaireActuel = null, canal = null;
+let nonLus = {};
 
 /* ---------- Outils ---------- */
 function normaliserNumero(brut) {
@@ -91,6 +93,53 @@ function compresserImage(fichier, max = 400) {
     };
     img.src = URL.createObjectURL(fichier);
   });
+}
+
+/* ---------- Sonnerie + vibration 🔔 ---------- */
+function jouerAlerte() {
+  try { if (navigator.vibrate) navigator.vibrate(150); } catch (e) {}
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.setValueAtTime(880, ctx.currentTime);
+    o.frequency.setValueAtTime(1175, ctx.currentTime + 0.12);
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    o.start(); o.stop(ctx.currentTime + 0.45);
+  } catch (e) {}
+}
+
+/* ---------- Badges non lus 🔴 ---------- */
+function mettreAJourBadges() {
+  const total = Object.values(nonLus).reduce((a, b) => a + b, 0);
+  const pastille = document.getElementById("pastilleDisc");
+  if (pastille) {
+    pastille.style.display = total ? "inline-block" : "none";
+    pastille.textContent = total;
+  }
+  document.title = total ? `(${total}) Tsiky 💬` : "Tsiky 💬";
+}
+
+async function recalculerNonLus() {
+  const { data: recus } = await sb.from("messages")
+    .select("sender_id,created_at")
+    .eq("receiver_id", user.id)
+    .order("created_at", { ascending: false }).limit(500);
+  const n = {};
+  (recus || []).forEach(m => {
+    const vu = localStorage.getItem("tsiky_vu_" + m.sender_id);
+    if (!vu || new Date(m.created_at) > new Date(vu)) n[m.sender_id] = (n[m.sender_id] || 0) + 1;
+  });
+  nonLus = n;
+  mettreAJourBadges();
+}
+
+function marquerLu(partenaireId) {
+  nonLus[partenaireId] = 0;
+  localStorage.setItem("tsiky_vu_" + partenaireId, new Date().toISOString());
+  mettreAJourBadges();
 }
 
 /* ---------- Démarrage ---------- */
@@ -199,6 +248,12 @@ function demarrerTempsReel() {
         if (partenaireActuel && m.sender_id === partenaireActuel.id) {
           ajouterBulle(m);
           defilerBas();
+          marquerLu(m.sender_id);
+        } else {
+          nonLus[m.sender_id] = (nonLus[m.sender_id] || 0) + 1;
+          jouerAlerte();
+          mettreAJourBadges();
+          if (document.getElementById("listeDisc")) afficherDiscussions();
         }
       })
     .subscribe();
@@ -213,7 +268,7 @@ function accueil(profil) {
     <div class="centre">${profil.avatar_url ? `<img class="avatar" src="${profil.avatar_url}">` : `<span class="rond">${profil.pseudo[0].toUpperCase()}</span>`}</div>
     <h1>Salama, ${profil.pseudo} ! 🎉</h1>
     <div class="numero">📱 Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent !</div>
-    <button id="btnDisc">💬 Mes discussions</button>
+    <button id="btnDisc">💬 Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
     <button id="btnNouvelle" class="secondaire">➕ Nouvelle discussion</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">⚙️ Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
@@ -225,6 +280,7 @@ function accueil(profil) {
     sb.auth.signOut();
   };
   verifierAnnonce();
+  recalculerNonLus();
 }
 
 /* ---------- Liste des discussions ---------- */
@@ -236,6 +292,7 @@ async function afficherDiscussions() {
     <button id="btnNouveau">➕ Nouvelle discussion</button>`;
   retourAcc.onclick = () => accueil(monProfil);
   btnNouveau.onclick = afficherNouveauContact;
+  await recalculerNonLus();
   const { data: msgs } = await sb.from("messages")
     .select("sender_id,receiver_id,created_at")
     .or("sender_id.eq." + user.id + ",receiver_id.eq." + user.id)
@@ -259,7 +316,8 @@ async function afficherDiscussions() {
     div.className = "contact-item";
     div.innerHTML = `
       ${p.avatar_url ? `<img src="${p.avatar_url}">` : `<span class="rond-p">${p.pseudo[0].toUpperCase()}</span>`}
-      <div class="infos"><div class="nom2">${p.pseudo}</div><div class="tel2">${p.phone || ""}</div></div>`;
+      <div class="infos"><div class="nom2">${p.pseudo}</div><div class="tel2">${p.phone || ""}</div></div>
+      ${nonLus[p.id] ? `<span class="pastille">${nonLus[p.id]}</span>` : ""}`;
     div.onclick = () => ouvrirConversation(p);
     cont.appendChild(div);
   });
@@ -327,6 +385,7 @@ async function ouvrirConversation(partenaire) {
   document.getElementById("zoneMsgs").innerHTML = "";
   (msgs || []).forEach(ajouterBulle);
   defilerBas();
+  marquerLu(partenaire.id);
   btnEnvoyer.onclick = envoyerTexte;
   txtMsg.addEventListener("keydown", e => { if (e.key === "Enter") envoyerTexte(); });
   btnPhotoM.onclick = () => fichierMsg.click();
