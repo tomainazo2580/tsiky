@@ -57,6 +57,9 @@
   .contact-item .nom2 { font-weight: 700; color: #1e293b; font-size: 15px; }
   .contact-item .tel2 { font-size: 12px; color: #64748b; }
   .pastille { display: inline-block; min-width: 22px; padding: 2px 7px; margin-left: 6px; border-radius: 99px; background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; text-align: center; }
+  #banniereInstall { background: #fef9c3; border: 1px solid #fde047; border-radius: 12px; padding: 12px; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
+  #banniereInstall .txt { flex: 1; font-size: 14px; color: #713f12; }
+  #banniereInstall button { width: auto; margin: 0; padding: 9px 16px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -541,31 +544,46 @@ async function chargerListe() {
   });
 }
 
-/* ---------- Service worker ( installation app 📲 ) ---------- */
+/* ---------- Service worker (installation app 📲) ---------- */
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
-/* ---------- Bouton d'installation 📲 ---------- */
+/* ---------- Bannière d'installation EN HAUT (style Namako) 📲 ---------- */
 let installationDifferee = null;
+const dejaInstallee = () => window.matchMedia("(display-mode: standalone)").matches;
+
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   installationDifferee = e;
-  afficherBoutonInstall();
+  afficherBanniereInstall();
 });
 
-function afficherBoutonInstall() {
-  if (!installationDifferee || document.getElementById("btnInstall")) return;
-  const b = document.createElement("button");
-  b.id = "btnInstall";
-  b.textContent = "📲 Installer Tsiky sur mon téléphone";
-  b.onclick = async () => {
+window.addEventListener("appinstalled", () => {
+  installationDifferee = null;
+  const b = document.getElementById("banniereInstall");
+  if (b) b.remove();
+});
+
+function afficherBanniereInstall() {
+  if (!installationDifferee || dejaInstallee()) return;
+  if (!app || document.getElementById("banniereInstall")) return;
+  const b = document.createElement("div");
+  b.id = "banniereInstall";
+  b.innerHTML = `<div class="txt">Ajoute Tsiky à ton écran d'accueil 📲</div>`;
+  const btn = document.createElement("button");
+  btn.textContent = "Installer";
+  btn.onclick = async () => {
     installationDifferee.prompt();
     await installationDifferee.userChoice;
     installationDifferee = null;
     b.remove();
   };
-  const cible = document.getElementById("app");
-  if (cible) cible.prepend(b);
+  b.appendChild(btn);
+  app.prepend(b);
 }
+
+/* Ré-affiche la bannière à chaque changement d'écran */
+new MutationObserver(() => afficherBanniereInstall())
+  .observe(app, { childList: true });
 </script>
 </body>
 </html>
