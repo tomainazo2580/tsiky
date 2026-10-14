@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#d9e4f2">
 <style>
-  :root, [data-theme="jour"] {
+  :root, [data-theme="jour"]     --ligneCahier: rgba(47, 95, 196, 0.08);{
     --fond: #d9e4f2;
     --carte: #edf3fa;
     --champ: #f8fbff;
@@ -25,7 +25,7 @@
     --banBord: #ead98a;
     --banTxt: #6b5416;
   }
-  [data-theme="nuit"] {
+  [data-theme="nuit"]     --ligneCahier: rgba(255, 255, 255, 0.05);{
     --fond: #0f172a;
     --carte: #1c2740;
     --champ: #131d33;
@@ -76,7 +76,8 @@
   .rond-p { background: var(--bulleAutre); color: var(--primaire); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; }
   .entete .nom { flex: 1; font-weight: 700; color: var(--texte); }
   .retour { background: none; font-size: 22px; padding: 0; margin: 0; width: auto; color: var(--primaire); }
-  .zone-msgs { height: 50vh; overflow-y: auto; padding: 12px 2px; display: flex; flex-direction: column; gap: 8px; }
+  .btnBloc { background: rgba(201, 42, 42, .12); font-size: 24px; padding: 4px 12px; margin: 0; width: auto; border-radius: 99px; color: var(--primaire); }
+  .zone-msgs { height: 50vh; overflow-y: auto; padding: 12px 2px; display: flex; flex-direction: column; gap: 8px; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, var(--ligneCahier) 27px, var(--ligneCahier) 28px); }
   .bulle { max-width: 80%; padding: 9px 13px; border-radius: 14px; font-size: 15px; word-wrap: break-word; }
   .bulle.autre { background: var(--bulleAutre); color: var(--texte); align-self: flex-start; border-bottom-left-radius: 4px; }
   .bulle.moi { background: var(--bulleMoi); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
@@ -400,7 +401,7 @@ function afficherPartage() {
 async function afficherDiscussions() {
   partenaireActuel = null;
   app.innerHTML = `
-    <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
+    <div class="entete"><button class="btnBloc" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
     <div id="listeDisc"><p style="color:var(--texte2);font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
     <button id="btnNouveau">➕ Nouvelle discussion</button>`;
   retourAcc.onclick = () => accueil(monProfil);
