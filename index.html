@@ -44,6 +44,42 @@
     --banTxt: #f3d98a;
     --ligneCahier: rgba(255, 255, 255, 0.05);
   }
+  [data-theme="foret"] {
+    --fond: #dfe9e2;
+    --carte: #ecf3ee;
+    --champ: #f7fbf8;
+    --texte: #1d2b22;
+    --texte2: #5c6f62;
+    --bordure: #bfd2c5;
+    --primaire: #2e7d4f;
+    --secondaire: #d9e8dd;
+    --bulleMoi: #2e7d4f;
+    --bulleAutre: #dcebe1;
+    --erreur: #c92a2a;
+    --ok: #2b8a3e;
+    --banFond: #fdf6d8;
+    --banBord: #ead98a;
+    --banTxt: #6b5416;
+    --ligneCahier: rgba(46, 125, 79, 0.09);
+  }
+  [data-theme="sepia"] {
+    --fond: #f0e6d6;
+    --carte: #f8f0e3;
+    --champ: #fbf6ec;
+    --texte: #3d3226;
+    --texte2: #7a6b56;
+    --bordure: #d8c8ae;
+    --primaire: #b06a35;
+    --secondaire: #ecdfc9;
+    --bulleMoi: #b06a35;
+    --bulleAutre: #eee2cc;
+    --erreur: #c92a2a;
+    --ok: #2b8a3e;
+    --banFond: #fdf6d8;
+    --banBord: #ead98a;
+    --banTxt: #6b5416;
+    --ligneCahier: rgba(176, 106, 53, 0.10);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; transition: background .25s, color .25s; }
   .card { background: var(--carte); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.10); }
@@ -104,7 +140,7 @@
 </style>
 </head>
 <body>
-<button id="btnTheme" title="Mode jour / nuit">🌙</button>
+<button id="btnTheme" title="Choisir un thème">🎨</button>
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 
@@ -122,19 +158,53 @@ let nonLus = {};
 
 const URL_APP = location.origin + location.pathname.replace(/index\.html$/, "");
 
-/* ---------- Thème jour / nuit 🌙 ---------- */
+/* ---------- Thèmes 🎨 ---------- */
+const COULEURS_BARRE = { jour: "#d9e4f2", nuit: "#0f172a", foret: "#dfe9e2", sepia: "#f0e6d6" };
+const LISTE_THEMES = [
+  { id: "jour", nom: "Jour doux", icone: "☀️" },
+  { id: "nuit", nom: "Nuit bleue", icone: "🌙" },
+  { id: "foret", nom: "Forêt", icone: "🌿" },
+  { id: "sepia", nom: "Cahier sépia", icone: "📓" }
+];
+
 function appliquerTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("tsiky_theme", theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", theme === "nuit" ? "#0f172a" : "#d9e4f2");
-  document.getElementById("btnTheme").textContent = theme === "nuit" ? "☀️" : "🌙";
+  if (meta) meta.setAttribute("content", COULEURS_BARRE[theme] || "#d9e4f2");
 }
-appliquerTheme(localStorage.getItem("tsiky_theme")
-  || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "nuit" : "jour"));
-document.getElementById("btnTheme").onclick = () => {
-  appliquerTheme(document.documentElement.getAttribute("data-theme") === "nuit" ? "jour" : "nuit");
-};
+appliquerTheme(localStorage.getItem("tsiky_theme") || "jour");
+document.getElementById("btnTheme").onclick = afficherMenuThemes;
+
+function afficherMenuThemes() {
+  const ancien = document.getElementById("popThemes");
+  if (ancien) ancien.remove();
+  const actuel = localStorage.getItem("tsiky_theme") || "jour";
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.id = "popThemes";
+  v.innerHTML = `
+    <div class="popup">
+      <h2 style="margin-bottom:4px">🎨 Choisis ton ambiance</h2>
+      <p style="font-size:13px;color:var(--texte2)">Mémorisée sur ton téléphone</p>
+      <div id="grilleThemes" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"></div>
+      <button class="secondaire" id="fermerThemes" style="margin-top:16px">Fermer</button>
+    </div>`;
+  document.body.appendChild(v);
+  const grille = document.getElementById("grilleThemes");
+  LISTE_THEMES.forEach(t => {
+    const b = document.createElement("button");
+    b.style.margin = "0";
+    b.style.padding = "14px 8px";
+    b.style.fontSize = "14px";
+    b.style.background = t.id === actuel ? "var(--primaire)" : "var(--secondaire)";
+    b.style.color = t.id === actuel ? "#fff" : "var(--texte)";
+    b.innerHTML = `${t.icone}<br>${t.nom}${t.id === actuel ? " ✓" : ""}`;
+    b.onclick = () => { appliquerTheme(t.id); v.remove(); };
+    grille.appendChild(b);
+  });
+  document.getElementById("fermerThemes").onclick = () => v.remove();
+}
 
 /* ---------- Outils ---------- */
 function normaliserNumero(brut) {
@@ -713,42 +783,6 @@ function afficherBanniereInstall() {
 
 new MutationObserver(() => afficherBanniereInstall())
   .observe(app, { childList: true });
-</script>
-  <!-- ===== FILTRE LUMIÈRE CHAUDE 🕯️ ===== -->
-<style>
-  #voileChaud { position: fixed; inset: 0; background: #ff9d4d; pointer-events: none; z-index: 9999; opacity: 0; mix-blend-mode: multiply; transition: opacity .2s; }
-  #btnFiltre { position: fixed; top: 64px; right: 12px; width: 44px; height: 44px; margin: 0; padding: 0; border-radius: 50%; font-size: 20px; z-index: 97; background: var(--carte); box-shadow: 0 2px 8px rgba(0,0,0,.18); border: none; }
-  #popFiltre input[type=range] { width: 100%; accent-color: var(--primaire); margin: 14px 0 6px; }
-</style>
-<div id="voileChaud"></div>
-<button id="btnFiltre" title="Lumière chaude">🕯️</button>
-<div class="voile" id="popFiltre" style="display:none">
-  <div class="popup">
-    <h2 style="margin-bottom:2px">🕯️ Lumière chaude</h2>
-    <p style="font-size:13px;color:var(--texte2)">Confort des yeux le soir 🌙</p>
-    <input type="range" id="curseurChaleur" min="0" max="100" step="5">
-    <p style="font-size:15px;font-weight:800" id="valChaleur">0%</p>
-    <button id="fermerFiltre" class="secondaire">Fermer</button>
-  </div>
-</div>
-<script>
-(function(){
-  const voile = document.getElementById("voileChaud");
-  const btn = document.getElementById("btnFiltre");
-  const pop = document.getElementById("popFiltre");
-  const curseur = document.getElementById("curseurChaleur");
-  const val = document.getElementById("valChaleur");
-  function appliquer(p) {
-    voile.style.opacity = (p / 100) * 0.5;
-    val.textContent = p + "%";
-    localStorage.setItem("tsiky_chaleur", p);
-  }
-  curseur.value = localStorage.getItem("tsiky_chaleur") || 0;
-  appliquer(parseInt(curseur.value));
-  curseur.addEventListener("input", () => appliquer(parseInt(curseur.value)));
-  btn.onclick = () => { pop.style.display = "flex"; };
-  document.getElementById("fermerFiltre").onclick = () => { pop.style.display = "none"; };
-})();
 </script>
 </body>
 </html>
