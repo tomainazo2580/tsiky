@@ -106,8 +106,10 @@
   .on { background: rgba(43,138,62,.18); color: var(--ok); }
   .off { background: rgba(201,42,42,.15); color: var(--erreur); }
   .voile { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 99; }
-  .popup { background: var(--carte); color: var(--texte); border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; }
-  .popup img { width: 100%; border-radius: 10px; margin-bottom: 10px; }
+  .popup { background: var(--carte); color: var(--texte); border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; max-height: 88vh; overflow-y: auto; }
+  .imgPub { height: 30vh; border-radius: 10px; overflow: hidden; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; background: var(--champ); }
+  .imgPub img { width: 100%; height: 100%; object-fit: cover; }
+  .btnLienPub { display: block; margin-top: 14px; padding: 13px; border-radius: 10px; background: var(--primaire); color: #fff; font-size: 16px; font-weight: 700; text-align: center; text-decoration: none; }
   .croix { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: var(--champ); color: var(--texte2); font-size: 15px; padding: 0; margin: 0; }
   .entete { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--bordure); }
   .entete img, .rond-p { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
@@ -120,6 +122,8 @@
   .bulle.autre { background: var(--bulleAutre); color: var(--texte); align-self: flex-start; border-bottom-left-radius: 4px; }
   .bulle.moi { background: var(--bulleMoi); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
   .bulle img { max-width: 100%; border-radius: 10px; display: block; margin-bottom: 4px; }
+  .docLien { display: inline-block; max-width: 100%; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.15); color: #fff; font-weight: 600; text-decoration: none; word-break: break-all; font-size: 14px; }
+  .bulle.autre .docLien { background: rgba(0,0,0,.06); color: var(--texte); }
   .heure { font-size: 10px; opacity: .75; text-align: right; margin-top: 3px; }
   .barre-envoi { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
   .barre-envoi input { flex: 1; }
@@ -145,7 +149,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v14</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v18</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -210,7 +214,7 @@ function afficherMenuThemes() {
   document.getElementById("fermerThemes").onclick = () => v.remove();
 }
 
-/* ---------- Contact : discussion avec le créateur ---------- */
+/* ---------- Contact ---------- */
 document.getElementById("lienContact").onclick = async () => {
   if (!user || !monProfil) return;
   const { data: admins } = await sb.from("profiles").select("*").eq("role", "admin").limit(1);
@@ -250,7 +254,7 @@ function compresserImage(fichier, max = 400) {
     img.onerror = () => { clearTimeout(timer); resolve(fichier); };
     img.src = URL.createObjectURL(fichier);
   });
-  }
+}
 
 /* ---------- Sonnerie + vibration ---------- */
 function jouerAlerte() {
@@ -572,11 +576,12 @@ async function ouvrirConversation(partenaire) {
       ? `<p class="erreur">Tu as bloqué ce contact. Débloque-le (bouton vert) pour discuter.</p>`
       : `<div class="barre-envoi">
           <input id="txtMsg" placeholder="Écris ton message…">
-          <button id="btnPhotoM" title="Photo">📷</button>
+          <button id="btnPJ" title="Joindre">📎</button>
           <button id="btnEnvoyer">➤</button>
         </div>
         <input type="file" id="fichierMsg" accept="image/*" hidden>
         <input type="file" id="fichierCam" accept="image/*" capture="environment" hidden>
+        <input type="file" id="fichierDoc" accept="application/pdf,.pdf" hidden>
         <p class="erreur" id="errMsg"></p>`}`;
   retourDisc.onclick = afficherDiscussions;
   btnBloc.onclick = async () => {
@@ -598,25 +603,28 @@ async function ouvrirConversation(partenaire) {
   marquerLu(partenaire.id);
   btnEnvoyer.onclick = envoyerTexte;
   txtMsg.addEventListener("keydown", e => { if (e.key === "Enter") envoyerTexte(); });
-  btnPhotoM.onclick = choisirSourcePhoto;
+  btnPJ.onclick = choisirPieceJointe;
   fichierMsg.onchange = () => envoyerDepuis(fichierMsg);
   fichierCam.onchange = () => envoyerDepuis(fichierCam);
+  fichierDoc.onchange = envoyerDocument;
 }
 
-/* ---------- Choix photo : caméra ou galerie ---------- */
-function choisirSourcePhoto() {
+/* ---------- Choix de la pièce jointe ---------- */
+function choisirPieceJointe() {
   const v = document.createElement("div");
   v.className = "voile";
   v.innerHTML = `
     <div class="popup">
-      <h2 style="margin-bottom:2px">Envoyer une photo</h2>
+      <h2 style="margin-bottom:2px">Joindre un fichier</h2>
       <button id="cCam">Prendre une photo</button>
       <button id="cGal" class="secondaire">Choisir dans la galerie</button>
+      <button id="cDoc" class="secondaire">Document PDF (max 10 Mo)</button>
       <button id="cAnn" class="secondaire">Annuler</button>
     </div>`;
   document.body.appendChild(v);
   document.getElementById("cCam").onclick = () => { v.remove(); document.getElementById("fichierCam").click(); };
   document.getElementById("cGal").onclick = () => { v.remove(); document.getElementById("fichierMsg").click(); };
+  document.getElementById("cDoc").onclick = () => { v.remove(); document.getElementById("fichierDoc").click(); };
   document.getElementById("cAnn").onclick = () => v.remove();
 }
 
@@ -628,7 +636,11 @@ function ajouterBulle(m) {
   const h = new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   let c = "";
   if (m.media_type === "image" && m.media_url) c += `<img src="${m.media_url}">`;
-  if (m.content) c += `<div>${m.content.replace(/</g, "&lt;")}</div>`;
+  if (m.media_type === "file" && m.media_url) {
+    const nom = (m.content || "Document").replace(/</g, "&lt;");
+    c += `<a class="docLien" href="${m.media_url}" target="_blank" rel="noopener">📄 ${nom}</a>`;
+  }
+  if (m.content && m.media_type !== "file") c += `<div>${m.content.replace(/</g, "&lt;")}</div>`;
   c += `<div class="heure">${h}</div>`;
   div.innerHTML = c;
   zone.appendChild(div);
@@ -673,6 +685,28 @@ async function envoyerDepuis(input) {
   defilerBas();
 }
 
+async function envoyerDocument() {
+  const input = document.getElementById("fichierDoc");
+  const f = input.files[0];
+  const err = document.getElementById("errMsg");
+  if (!f) return;
+  if (f.size > 10 * 1024 * 1024) { if (err) err.textContent = "Fichier trop lourd — 10 Mo maximum."; input.value = ""; return; }
+  if (err) err.textContent = "Envoi du document…";
+  const nomPropre = (f.name || "document.pdf").replace(/[^\w.\-() ]/g, "_");
+  const chemin = user.id + "/doc_" + Date.now() + "_" + nomPropre;
+  const { error: errUp } = await sb.storage.from("fichiers").upload(chemin, f);
+  if (errUp) { if (err) err.textContent = "Document : " + errUp.message; input.value = ""; return; }
+  const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
+  const { data, error } = await sb.from("messages").insert({
+    sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "file", content: f.name || "Document"
+  }).select().single();
+  if (error) { if (err) err.textContent = "Impossible d'envoyer."; input.value = ""; return; }
+  input.value = "";
+  if (err) err.textContent = "";
+  ajouterBulle(data);
+  defilerBas();
+}
+
 /* ---------- Popup pub (1 fois par jour max) ---------- */
 async function verifierAnnonce() {
   const { data } = await sb.from("annonces").select("*").eq("actif", true)
@@ -681,21 +715,25 @@ async function verifierAnnonce() {
   const a = data[0];
   const vu = JSON.parse(localStorage.getItem("tsiky_pub_vu") || "{}");
   if (vu.id === a.id && vu.jour === new Date().toDateString()) return;
+  let lienOk = null;
+  if (a.lien && a.lien.trim()) {
+    lienOk = a.lien.trim();
+    if (!/^https?:\/\//i.test(lienOk)) lienOk = "https://" + lienOk;
+  }
   zonePopup.innerHTML = `
     <div class="voile">
       <div class="popup">
         <button class="croix" id="fermerPub">✕</button>
-        ${a.image_url ? `<img src="${a.image_url}">` : ""}
+        ${a.image_url ? `<div class="imgPub"><img src="${a.image_url}"></div>` : ""}
         <h2>${a.titre}</h2>
         <p style="color:var(--texte);font-size:15px;margin:8px 0 12px">${a.message}</p>
-        ${a.lien ? `<button id="btnLien">Découvrir</button>` : ""}
+        ${lienOk ? `<a class="btnLienPub" id="btnLien" href="${lienOk}" target="_blank" rel="noopener">Découvrir</a>` : ""}
       </div>
     </div>`;
   fermerPub.onclick = () => {
     zonePopup.innerHTML = "";
     localStorage.setItem("tsiky_pub_vu", JSON.stringify({ id: a.id, jour: new Date().toDateString() }));
   };
-  if (a.lien) btnLien.onclick = () => window.open(a.lien, "_blank");
 }
 
 /* ---------- Espace admin ---------- */
@@ -726,26 +764,6 @@ async function publierAnnonce() {
   const err = document.getElementById("err");
   const titre = aTitre.value.trim(), message = aMessage.value.trim();
   if (!titre || !message) { err.textContent = "Titre et message obligatoires."; return; }
-  err.textContent = "Publication…";
-  let image_url = null;
-  if (aImage.files[0]) {
-    const chemin = `${user.id}/annonce_${Date.now()}.jpg`;
-    const { error: errUp } = await sb.storage.from("pubs").upload(chemin, await compresserImage(aImage.files[0], 600), { upsert: true });
-    if (errUp) { err.textContent = "Image : " + errUp.message; return; }
-    image_url = sb.storage.from("pubs").getPublicUrl(chemin).data.publicUrl;
-  }
-  const { error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null });
-  if (error) { err.textContent = error.message; return; }
-  document.getElementById("ok").textContent = "Annonce publiée";
-  aTitre.value = ""; aMessage.value = ""; aLien.value = ""; aImage.value = "";
-  err.textContent = "";
-  chargerListe();
-}
-
-async function publierAnnonce() {
-  const err = document.getElementById("err");
-  const titre = aTitre.value.trim(), message = aMessage.value.trim();
-  if (!titre || !message) { err.textContent = "Titre et message obligatoires."; return; }
   err.textContent = "Preparation…";
   let image_url = null;
   if (aImage.files[0]) {
@@ -764,6 +782,31 @@ async function publierAnnonce() {
   err.textContent = "";
   aTitre.value = ""; aMessage.value = ""; aLien.value = ""; aImage.value = "";
   chargerListe();
+}
+
+async function chargerListe() {
+  const { data } = await sb.from("annonces").select("*").order("created_at", { ascending: false });
+  liste.innerHTML = data?.length ? "" : `<p style="color:var(--texte2);font-size:14px">Aucune annonce pour l'instant.</p>`;
+  data?.forEach(a => {
+    const div = document.createElement("div");
+    div.className = "annonce";
+    div.innerHTML = `
+      <h3>${a.titre}</h3>
+      <p>${a.message}</p>
+      <div class="ligne">
+        <span class="badge ${a.actif ? "on" : "off"}">${a.actif ? "ACTIVE" : "MASQUÉE"}</span>
+        <button class="mini secondaire" id="tg-${a.id}">${a.actif ? "Masquer" : "Activer"}</button>
+        <button class="mini secondaire" id="del-${a.id}">🗑️</button>
+      </div>`;
+    liste.appendChild(div);
+    document.getElementById("tg-" + a.id).onclick = async () => {
+      await sb.from("annonces").update({ actif: !a.actif }).eq("id", a.id);
+      chargerListe();
+    };
+    document.getElementById("del-" + a.id).onclick = async () => {
+      if (confirm("Supprimer cette annonce ?")) { await sb.from("annonces").delete().eq("id", a.id); chargerListe(); }
+    };
+  });
 }
 
 /* ---------- Service worker ---------- */
