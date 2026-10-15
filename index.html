@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tsiky 💬</title>
+<title>Tsiky</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#d9e4f2">
@@ -81,7 +81,7 @@
     --ligneCahier: rgba(176, 106, 53, 0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; transition: background .25s, color .25s; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; padding-bottom: 48px; transition: background .25s, color .25s; }
   .card { background: var(--carte); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.10); }
   h1 { color: var(--primaire); text-align: center; margin-bottom: 4px; font-size: 26px; }
   h2 { color: var(--primaire); font-size: 17px; margin-top: 20px; }
@@ -130,19 +130,23 @@
   .contact-item .nom2 { font-weight: 700; color: var(--texte); font-size: 15px; }
   .contact-item .tel2 { font-size: 12px; color: var(--texte2); }
   .pastille { display: inline-block; min-width: 22px; padding: 2px 7px; margin-left: 6px; border-radius: 99px; background: #e03131; color: #fff; font-size: 12px; font-weight: 700; text-align: center; }
-  #banniereInstall { background: var(--banFond); border: 1px solid var(--banBord); border-radius: 12px; padding: 12px; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
+  #banniereInstall { background: var(--banFond); border: 1px solid var(--banBord); border-radius: 12px; padding: 12px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; position: relative; }
   #banniereInstall .txt { flex: 1; font-size: 14px; color: var(--banTxt); }
   #banniereInstall button { width: auto; margin: 0; padding: 9px 16px; font-size: 14px; }
+  #banniereInstall .croixBan { position: static; width: 30px; height: 30px; padding: 0; font-size: 13px; background: transparent; color: var(--banTxt); }
   #qrBox { display: flex; justify-content: center; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid var(--bordure); margin: 12px 0; }
   #qrBox img, #qrBox canvas { width: 240px !important; height: 240px !important; }
   .lienApp { font-size: 12px; color: var(--texte2); word-break: break-all; margin-bottom: 12px; }
-  #btnTheme { position: fixed; top: 12px; right: 12px; width: 44px; height: 44px; margin: 0; padding: 0; border-radius: 50%; font-size: 20px; z-index: 97; background: var(--carte); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  #footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: 11px; font-size: 12px; color: var(--texte2); background: var(--fond); z-index: 96; }
+  #footer a { color: var(--primaire); cursor: pointer; font-weight: 600; }
 </style>
 </head>
 <body>
-<button id="btnTheme" title="Choisir un thème">🎨</button>
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
+<div id="footer">
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v14</span>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -158,13 +162,13 @@ let nonLus = {};
 
 const URL_APP = location.origin + location.pathname.replace(/index\.html$/, "");
 
-/* ---------- Thèmes 🎨 ---------- */
+/* ---------- Thèmes ---------- */
 const COULEURS_BARRE = { jour: "#d9e4f2", nuit: "#0f172a", foret: "#dfe9e2", sepia: "#f0e6d6" };
 const LISTE_THEMES = [
-  { id: "jour", nom: "Jour doux", icone: "☀️" },
-  { id: "nuit", nom: "Nuit bleue", icone: "🌙" },
-  { id: "foret", nom: "Forêt", icone: "🌿" },
-  { id: "sepia", nom: "Cahier sépia", icone: "📓" }
+  { id: "jour", nom: "Jour doux" },
+  { id: "nuit", nom: "Nuit bleue" },
+  { id: "foret", nom: "Forêt" },
+  { id: "sepia", nom: "Cahier sépia" }
 ];
 
 function appliquerTheme(theme) {
@@ -174,7 +178,7 @@ function appliquerTheme(theme) {
   if (meta) meta.setAttribute("content", COULEURS_BARRE[theme] || "#d9e4f2");
 }
 appliquerTheme(localStorage.getItem("tsiky_theme") || "jour");
-document.getElementById("btnTheme").onclick = afficherMenuThemes;
+document.getElementById("lienThemes").onclick = afficherMenuThemes;
 
 function afficherMenuThemes() {
   const ancien = document.getElementById("popThemes");
@@ -185,7 +189,7 @@ function afficherMenuThemes() {
   v.id = "popThemes";
   v.innerHTML = `
     <div class="popup">
-      <h2 style="margin-bottom:4px">🎨 Choisis ton ambiance</h2>
+      <h2 style="margin-bottom:4px">Choisis ton ambiance</h2>
       <p style="font-size:13px;color:var(--texte2)">Mémorisée sur ton téléphone</p>
       <div id="grilleThemes" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"></div>
       <button class="secondaire" id="fermerThemes" style="margin-top:16px">Fermer</button>
@@ -199,11 +203,24 @@ function afficherMenuThemes() {
     b.style.fontSize = "14px";
     b.style.background = t.id === actuel ? "var(--primaire)" : "var(--secondaire)";
     b.style.color = t.id === actuel ? "#fff" : "var(--texte)";
-    b.innerHTML = `${t.icone}<br>${t.nom}${t.id === actuel ? " ✓" : ""}`;
+    b.innerHTML = `${t.nom}${t.id === actuel ? " ✓" : ""}`;
     b.onclick = () => { appliquerTheme(t.id); v.remove(); };
     grille.appendChild(b);
   });
   document.getElementById("fermerThemes").onclick = () => v.remove();
+}
+
+/* ---------- Contact : discussion avec le créateur ---------- */
+document.getElementById("lienContact").onclick = async () => {
+  if (!user || !monProfil) return;
+  const { data: admins } = await sb.from("profiles").select("*").eq("role", "admin").limit(1);
+  if (admins && admins.length) ouvrirConversation(admins[0]);
+};
+
+function majFooter() {
+  const connecte = !!user && !!monProfil;
+  document.getElementById("lienContact").style.display = connecte ? "inline" : "none";
+  document.getElementById("sepContact").style.display = connecte ? "inline" : "none";
 }
 
 /* ---------- Outils ---------- */
@@ -230,7 +247,7 @@ function compresserImage(fichier, max = 400) {
   });
 }
 
-/* ---------- Sonnerie + vibration 🔔 ---------- */
+/* ---------- Sonnerie + vibration ---------- */
 function jouerAlerte() {
   try { if (navigator.vibrate) navigator.vibrate(150); } catch (e) {}
   try {
@@ -246,7 +263,7 @@ function jouerAlerte() {
   } catch (e) {}
 }
 
-/* ---------- Badges non lus 🔴 ---------- */
+/* ---------- Badges non lus ---------- */
 function mettreAJourBadges() {
   const total = Object.values(nonLus).reduce((a, b) => a + b, 0);
   const pastille = document.getElementById("pastilleDisc");
@@ -254,7 +271,7 @@ function mettreAJourBadges() {
     pastille.style.display = total ? "inline-block" : "none";
     pastille.textContent = total;
   }
-  document.title = total ? `(${total}) Tsiky 💬` : "Tsiky 💬";
+  document.title = total ? `(${total}) Tsiky` : "Tsiky";
 }
 
 async function recalculerNonLus() {
@@ -281,19 +298,19 @@ function marquerLu(partenaireId) {
 (async () => {
   const { data } = await sb.auth.getSession();
   user = data.session?.user ?? null;
-  if (user) apresConnexion(); else afficherAuth();
+  if (user) apresConnexion(); else { afficherAuth(); majFooter(); }
 })();
 
 sb.auth.onAuthStateChange((_e, session) => {
   user = session?.user ?? null;
-  if (!user) afficherAuth();
+  if (!user) { afficherAuth(); majFooter(); }
 });
 
 /* ---------- Écran : numéro + mot de passe ---------- */
 function afficherAuth() {
   app.innerHTML = `
-    <h1>Tsiky 💬</h1>
-    <p class="sous">Le chat léger de Madagascar 🇲🇬</p>
+    <h1>Tsiky</h1>
+    <p class="sous">Le chat léger de Madagascar</p>
     <label>Ton numéro</label>
     <input id="numero" type="tel" placeholder="034 00 000 00">
     <label>Mot de passe</label>
@@ -333,6 +350,7 @@ async function lancerAuth(inscription) {
 async function apresConnexion() {
   const { data: profil } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (!profil) afficherCreationProfil(); else accueil(profil);
+  majFooter();
 }
 
 /* ---------- Écran : création de profil ---------- */
@@ -343,10 +361,10 @@ function afficherCreationProfil() {
     <p class="sous">Ton numéro : ${numeroDepuisCompte()}</p>
     <div class="centre"><span class="rond" id="apercu">+</span></div>
     <input type="file" id="avatar" accept="image/*" hidden>
-    <button id="btnPhoto" class="secondaire">📷 Choisir une photo</button>
+    <button id="btnPhoto" class="secondaire">Choisir une photo</button>
     <label>Ton pseudo</label>
     <input id="pseudo" placeholder="Ex : Hery">
-    <button id="btnOk">C'est parti ✅</button>
+    <button id="btnOk">C'est parti</button>
     <p class="erreur" id="err"></p>`;
   const inputAvatar = document.getElementById("avatar");
   btnPhoto.onclick = () => inputAvatar.click();
@@ -401,12 +419,12 @@ function accueil(profil) {
   demarrerTempsReel();
   app.innerHTML = `
     <div class="centre">${profil.avatar_url ? `<img class="avatar" src="${profil.avatar_url}">` : `<span class="rond">${profil.pseudo[0].toUpperCase()}</span>`}</div>
-    <h1>Salama, ${profil.pseudo} ! 🎉</h1>
-    <div class="numero">📱 Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent !</div>
-    <button id="btnDisc">💬 Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
-    <button id="btnNouvelle" class="secondaire">➕ Nouvelle discussion</button>
-    <button id="btnPartager" class="secondaire">📤 Partager Tsiky</button>
-    ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">⚙️ Espace admin</button>` : ""}
+    <h1>Salama, ${profil.pseudo} !</h1>
+    <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
+    <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
+    <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
+    <button id="btnPartager" class="secondaire">Partager Tsiky</button>
+    ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
   btnDisc.onclick = afficherDiscussions;
   btnNouvelle.onclick = afficherNouveauContact;
@@ -420,19 +438,19 @@ function accueil(profil) {
   recalculerNonLus();
 }
 
-/* ---------- Partager Tsiky (QR code) 📤 ---------- */
+/* ---------- Partager Tsiky (QR code) ---------- */
 function afficherPartage() {
   const v = document.createElement("div");
   v.className = "voile";
   v.innerHTML = `
     <div class="popup">
       <button class="croix" id="pFermer">✕</button>
-      <h2 style="margin-bottom:6px">Partager Tsiky 💬</h2>
+      <h2 style="margin-bottom:6px">Partager Tsiky</h2>
       <p style="font-size:14px;color:var(--texte2)">Ton ami scanne ce QR Code avec l'appareil photo de son téléphone : Tsiky s'ouvre et il peut s'inscrire.</p>
       <div id="qrBox"></div>
       <div class="lienApp">${URL_APP}</div>
-      <button id="pCopier">📋 Copier le lien</button>
-      <button id="pEnvoyer" class="secondaire">📨 Envoyer le lien</button>
+      <button id="pCopier">Copier le lien</button>
+      <button id="pEnvoyer" class="secondaire">Envoyer le lien</button>
       <button id="pQuitter" class="secondaire">Fermer</button>
     </div>`;
   document.body.appendChild(v);
@@ -452,17 +470,17 @@ function afficherPartage() {
   document.getElementById("pCopier").onclick = async () => {
     try {
       await navigator.clipboard.writeText(URL_APP);
-      document.getElementById("pCopier").textContent = "✅ Copié !";
+      document.getElementById("pCopier").textContent = "Copié !";
     } catch (e) {
       prompt("Copie ce lien :", URL_APP);
     }
-    setTimeout(() => document.getElementById("pCopier").textContent = "📋 Copier le lien", 2000);
+    setTimeout(() => document.getElementById("pCopier").textContent = "Copier le lien", 2000);
   };
 
   document.getElementById("pEnvoyer").onclick = async () => {
-    const texte = "Rejoins-moi sur Tsiky 💬 le chat léger de Madagascar ! " + URL_APP;
+    const texte = "Rejoins-moi sur Tsiky, le chat léger de Madagascar ! " + URL_APP;
     if (navigator.share) {
-      try { await navigator.share({ title: "Tsiky 💬", text: texte, url: URL_APP }); } catch (e) {}
+      try { await navigator.share({ title: "Tsiky", text: texte, url: URL_APP }); } catch (e) {}
     } else {
       window.open("https://wa.me/?text=" + encodeURIComponent(texte), "_blank");
     }
@@ -475,7 +493,7 @@ async function afficherDiscussions() {
   app.innerHTML = `
     <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Mes discussions</span></div>
     <div id="listeDisc"><p style="color:var(--texte2);font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
-    <button id="btnNouveau">➕ Nouvelle discussion</button>`;
+    <button id="btnNouveau">Nouvelle discussion</button>`;
   retourAcc.onclick = () => accueil(monProfil);
   btnNouveau.onclick = afficherNouveauContact;
   await recalculerNonLus();
@@ -490,7 +508,7 @@ async function afficherDiscussions() {
   });
   const cont = document.getElementById("listeDisc");
   if (!ordre.length) {
-    cont.innerHTML = `<p style="color:var(--texte2);font-size:14px;text-align:center;margin:20px 0">Aucune discussion.<br>Commence par un contact ! 👇</p>`;
+    cont.innerHTML = `<p style="color:var(--texte2);font-size:14px;text-align:center;margin:20px 0">Aucune discussion.<br>Commence par un contact !</p>`;
     return;
   }
   const { data: profs } = await sb.from("profiles").select("*").in("id", ordre);
@@ -515,7 +533,7 @@ function afficherNouveauContact() {
     <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Nouvelle discussion</span></div>
     <label>Numéro de ton ami</label>
     <input id="numAmi" type="tel" placeholder="034 00 000 00">
-    <button id="btnChercher">🔍 Chercher</button>
+    <button id="btnChercher">Chercher</button>
     <p class="erreur" id="err"></p>`;
   retourAcc.onclick = () => accueil(monProfil);
   btnChercher.onclick = async () => {
@@ -523,7 +541,7 @@ function afficherNouveauContact() {
     err.textContent = "";
     const num = normaliserNumero(document.getElementById("numAmi").value);
     if (!num) { err.textContent = "Numéro invalide. Exemple : 034 00 000 00"; return; }
-    if (num === monProfil.phone) { err.textContent = "C'est ton propre numéro 😄"; return; }
+    if (num === monProfil.phone) { err.textContent = "C'est ton propre numéro."; return; }
     err.textContent = "Recherche…";
     const { data: p } = await sb.from("profiles").select("*").eq("phone", num).maybeSingle();
     if (!p) { err.textContent = "Aucun compte Tsiky avec ce numéro. Dis-lui de s'inscrire !"; return; }
@@ -546,7 +564,7 @@ async function ouvrirConversation(partenaire) {
     </div>
     <div class="zone-msgs" id="zoneMsgs"><p style="color:var(--texte2);font-size:13px;text-align:center">Chargement…</p></div>
     ${bloque
-      ? `<p class="erreur">Tu as bloqué ce contact. Débloque-le (✅) pour discuter.</p>`
+      ? `<p class="erreur">Tu as bloqué ce contact. Débloque-le (bouton vert) pour discuter.</p>`
       : `<div class="barre-envoi">
           <input id="txtMsg" placeholder="Écris ton message…">
           <button id="btnPhotoM" title="Photo">📷</button>
@@ -580,15 +598,15 @@ async function ouvrirConversation(partenaire) {
   fichierCam.onchange = () => envoyerDepuis(fichierCam);
 }
 
-/* ---------- Choix photo : caméra ou galerie 📸 ---------- */
+/* ---------- Choix photo : caméra ou galerie ---------- */
 function choisirSourcePhoto() {
   const v = document.createElement("div");
   v.className = "voile";
   v.innerHTML = `
     <div class="popup">
-      <h2 style="margin-bottom:2px">📸 Envoyer une photo</h2>
-      <button id="cCam">📷 Prendre une photo</button>
-      <button id="cGal" class="secondaire">🖼️ Choisir dans la galerie</button>
+      <h2 style="margin-bottom:2px">Envoyer une photo</h2>
+      <button id="cCam">Prendre une photo</button>
+      <button id="cGal" class="secondaire">Choisir dans la galerie</button>
       <button id="cAnn" class="secondaire">Annuler</button>
     </div>`;
   document.body.appendChild(v);
@@ -665,7 +683,7 @@ async function verifierAnnonce() {
         ${a.image_url ? `<img src="${a.image_url}">` : ""}
         <h2>${a.titre}</h2>
         <p style="color:var(--texte);font-size:15px;margin:8px 0 12px">${a.message}</p>
-        ${a.lien ? `<button id="btnLien">Découvrir 🔗</button>` : ""}
+        ${a.lien ? `<button id="btnLien">Découvrir</button>` : ""}
       </div>
     </div>`;
   fermerPub.onclick = () => {
@@ -678,7 +696,7 @@ async function verifierAnnonce() {
 /* ---------- Espace admin ---------- */
 function afficherAdmin() {
   app.innerHTML = `
-    <h1>⚙️ Admin</h1>
+    <h1>Admin</h1>
     <p class="sous">Crée et gère tes annonces</p>
     <label>Titre</label>
     <input id="aTitre" placeholder="Ex : Découvre Namako !">
@@ -688,7 +706,7 @@ function afficherAdmin() {
     <input id="aImage" type="file" accept="image/*">
     <label>Lien à ouvrir (optionnel)</label>
     <input id="aLien" type="url" placeholder="https://namako.workers.dev">
-    <button id="btnPublier">📢 Publier l'annonce</button>
+    <button id="btnPublier">Publier l'annonce</button>
     <p class="erreur" id="err"></p>
     <p class="info" id="ok"></p>
     <h2>Annonces existantes</h2>
@@ -713,7 +731,7 @@ async function publierAnnonce() {
   }
   const { error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null });
   if (error) { err.textContent = error.message; return; }
-  document.getElementById("ok").textContent = "Annonce publiée ✅";
+  document.getElementById("ok").textContent = "Annonce publiée";
   aTitre.value = ""; aMessage.value = ""; aLien.value = ""; aImage.value = "";
   err.textContent = "";
   chargerListe();
@@ -744,12 +762,13 @@ async function chargerListe() {
   });
 }
 
-/* ---------- Service worker (installation app 📲) ---------- */
+/* ---------- Service worker ---------- */
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
-/* ---------- Bannière d'installation EN HAUT (style Namako) 📲 ---------- */
+/* ---------- Bannière d'installation ---------- */
 let installationDifferee = null;
-const dejaInstallee = () => window.matchMedia("(display-mode: standalone)").matches;
+const dejaInstallee = () => window.matchMedia("(display-mode: standalone)").matches
+  || localStorage.getItem("tsiky_installee") === "1";
 
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
@@ -759,16 +778,22 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 window.addEventListener("appinstalled", () => {
   installationDifferee = null;
+  localStorage.setItem("tsiky_installee", "1");
   const b = document.getElementById("banniereInstall");
   if (b) b.remove();
 });
 
+function banniereRefusee() {
+  const j = localStorage.getItem("tsiky_ban_cache");
+  return j && (Date.now() - parseInt(j)) < 7 * 24 * 3600 * 1000;
+}
+
 function afficherBanniereInstall() {
-  if (!installationDifferee || dejaInstallee()) return;
+  if (!installationDifferee || dejaInstallee() || banniereRefusee()) return;
   if (!app || document.getElementById("banniereInstall")) return;
   const b = document.createElement("div");
   b.id = "banniereInstall";
-  b.innerHTML = `<div class="txt">Ajoute Tsiky à ton écran d'accueil 📲</div>`;
+  b.innerHTML = `<div class="txt">Ajoute Tsiky à ton écran d'accueil</div>`;
   const btn = document.createElement("button");
   btn.textContent = "Installer";
   btn.onclick = async () => {
@@ -777,7 +802,15 @@ function afficherBanniereInstall() {
     installationDifferee = null;
     b.remove();
   };
+  const x = document.createElement("button");
+  x.className = "croixBan";
+  x.textContent = "✕";
+  x.onclick = () => {
+    b.remove();
+    localStorage.setItem("tsiky_ban_cache", String(Date.now()));
+  };
   b.appendChild(btn);
+  b.appendChild(x);
   app.prepend(b);
 }
 
