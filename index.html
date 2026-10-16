@@ -97,6 +97,7 @@
   .centre { text-align: center; margin: 10px 0; }
   .avatar, .rond { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
   .rond { background: var(--bulleAutre); color: var(--primaire); display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; }
+  .btnModifPhoto { background: var(--secondaire); color: var(--texte); font-weight: 600; font-size: 13px; padding: 7px 14px; margin-top: 8px; width: auto; display: inline-block; border-radius: 99px; }
   .numero { text-align: center; color: var(--texte2); font-size: 14px; background: var(--champ); border-radius: 10px; padding: 8px; margin: 10px 0; }
   .annonce { border: 1px solid var(--bordure); border-radius: 12px; padding: 12px; margin-top: 10px; }
   .annonce h3 { font-size: 15px; color: var(--primaire); }
@@ -149,7 +150,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v18</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v19</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -427,7 +428,10 @@ function accueil(profil) {
   partenaireActuel = null;
   demarrerTempsReel();
   app.innerHTML = `
-    <div class="centre">${profil.avatar_url ? `<img class="avatar" src="${profil.avatar_url}">` : `<span class="rond">${profil.pseudo[0].toUpperCase()}</span>`}</div>
+    <div class="centre">
+      ${profil.avatar_url ? `<img class="avatar" id="monAvatar" src="${profil.avatar_url}">` : `<span class="rond" id="monAvatar">${profil.pseudo[0].toUpperCase()}</span>`}
+      <br><button class="btnModifPhoto" id="btnChangerPhoto">Changer la photo</button>
+    </div>
     <h1>Salama, ${profil.pseudo} !</h1>
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
@@ -435,6 +439,7 @@ function accueil(profil) {
     <button id="btnPartager" class="secondaire">Partager Tsiky</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
+  document.getElementById("btnChangerPhoto").onclick = () => changerPhoto(profil);
   btnDisc.onclick = afficherDiscussions;
   btnNouvelle.onclick = afficherNouveauContact;
   btnPartager.onclick = afficherPartage;
@@ -445,6 +450,42 @@ function accueil(profil) {
   };
   verifierAnnonce();
   recalculerNonLus();
+}
+
+/* ---------- Changer la photo de profil ---------- */
+function changerPhoto(profil) {
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup">
+      <button class="croix" id="cpFermer">✕</button>
+      <h2 style="margin-bottom:6px">Changer la photo</h2>
+      <div class="centre">${profil.avatar_url ? `<img class="avatar" src="${profil.avatar_url}">` : `<span class="rond">?</span>`}</div>
+      <input type="file" id="cpFichier" accept="image/*" hidden>
+      <button id="cpChoisir">Choisir une nouvelle photo</button>
+      <button id="cpQuitter" class="secondaire">Annuler</button>
+      <p class="erreur" id="cpErr"></p>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("cpFermer").onclick = () => v.remove();
+  document.getElementById("cpQuitter").onclick = () => v.remove();
+  document.getElementById("cpChoisir").onclick = () => document.getElementById("cpFichier").click();
+  document.getElementById("cpFichier").onchange = async () => {
+    const f = document.getElementById("cpFichier").files[0];
+    const err = document.getElementById("cpErr");
+    if (!f) return;
+    err.textContent = "Compression de la photo…";
+    const chemin = `${user.id}/avatar.jpg`;
+    const { error: errUp } = await sb.storage.from("avatars").upload(chemin, await compresserImage(f), { upsert: true });
+    if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
+    err.textContent = "Enregistrement…";
+    const nouvelleUrl = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl + "?t=" + Date.now();
+    const { error: errDb } = await sb.from("profiles").update({ avatar_url: nouvelleUrl }).eq("id", user.id);
+    if (errDb) { err.textContent = "Enregistrement : " + errDb.message; return; }
+    v.remove();
+    const { data: p } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    if (p) accueil(p);
+  };
 }
 
 /* ---------- Partager Tsiky (QR code) ---------- */
@@ -638,7 +679,7 @@ function ajouterBulle(m) {
   if (m.media_type === "image" && m.media_url) c += `<img src="${m.media_url}">`;
   if (m.media_type === "file" && m.media_url) {
     const nom = (m.content || "Document").replace(/</g, "&lt;");
-    c += `<a class="docLien" href="${m.media_url}" target="_blank" rel="noopener">📄 ${nom}</a>`;
+    c += `<a class="docLien" href="${m.media_url}" target="_blank" rel="noopener">${nom}</a>`;
   }
   if (m.content && m.media_type !== "file") c += `<div>${m.content.replace(/</g, "&lt;")}</div>`;
   c += `<div class="heure">${h}</div>`;
