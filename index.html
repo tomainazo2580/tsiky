@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<!-- Tsiky v22 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v22 ». -->
+<!-- Tsiky v23 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v23 ».
+     Pubs : chaque annonce a un EMPLACEMENT choisi à la création (popup accueil /
+     fenêtre inscription / nouvelle discussion). Elle reste dans SON espace.
+     Rotation quotidienne à l'intérieur de l'espace si plusieurs annonces. -->
 <html lang="fr" data-theme="jour">
 <head>
 <meta charset="UTF-8">
@@ -152,7 +155,6 @@
   .bandeauPub .txtBandeau { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 14px; color: #fff; text-align: center; }
   .bandeauPub .txtBandeau b { font-size: 16px; }
   .bandeauPub .txtBandeau span { font-size: 13px; opacity: .92; }
-  .badgePub { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.45); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 99px; letter-spacing: .5px; }
   .zoomVoile { position: fixed; inset: 0; background: rgba(5,10,20,.92); display: flex; align-items: center; justify-content: center; z-index: 200; cursor: zoom-out; }
   .zoomVoile img { max-width: 94vw; max-height: 84vh; object-fit: contain; border-radius: 10px; }
   .clicPhoto { cursor: zoom-in; }
@@ -163,7 +165,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v22</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v23</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -366,7 +368,7 @@ function afficherAuth() {
     <p class="erreur" id="err"></p>`;
   btnInscrire.onclick = () => lancerAuth(true);
   btnConnecter.onclick = () => lancerAuth(false);
-  remplirZonePub("pubAuth", 0);
+  remplirZonePub("pubAuth", "inscription", 0);
 }
 
 async function lancerAuth(inscription) {
@@ -663,7 +665,7 @@ function afficherNouveauContact() {
     <button id="btnChercher">Chercher</button>
     <p class="erreur" id="err"></p>`;
   retourAcc.onclick = () => accueil(monProfil);
-  remplirZonePub("pubNouveau", 1);
+  remplirZonePub("pubNouveau", "nouveau", 1);
   btnChercher.onclick = async () => {
     const err = document.getElementById("err");
     err.textContent = "";
@@ -850,17 +852,22 @@ function contenuBandeauPub(a) {
   let c = "";
   if (a.image_url) c += `<img src="${a.image_url}" alt="Publicité">`;
   else c += `<div class="txtBandeau"><b>${a.titre}</b><span>${a.message}</span></div>`;
-  c += `<span class="badgePub">Pub</span>`;
   return c;
 }
 
-async function remplirZonePub(idZone, rang) {
+/* Annonces d'un espace = celles marquées pour cet espace (+ "toutes" pour compat) */
+function pubsPourEspace(pubs, espace) {
+  return pubs.filter(a => a.emplacement === espace || a.emplacement === "toutes" || !a.emplacement);
+}
+
+async function remplirZonePub(idZone, espace, rang) {
   const zone = document.getElementById(idZone);
   if (!zone) return;
   const pubs = await chargerPubsFenetres();
-  if (!pubs.length) return;
+  const liste = pubsPourEspace(pubs, espace);
+  if (!liste.length) { zone.innerHTML = ""; zone.style.display = "none"; return; }
   const jour = Math.floor(Date.now() / 86400000);
-  const a = pubs[(jour + rang) % pubs.length];
+  const a = liste[(jour + rang) % liste.length];
   const lien = lienCorrect(a.lien);
   zone.innerHTML = lien
     ? `<a class="bandeauPub" href="${lien}" target="_blank" rel="noopener">${contenuBandeauPub(a)}</a>`
@@ -871,16 +878,17 @@ async function remplirZonePub(idZone, rang) {
 /* ---------- Rafraîchit les bandeaux quand on revient sur l'app ---------- */
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
-  if (document.getElementById("pubAuth")) remplirZonePub("pubAuth", 0);
-  if (document.getElementById("pubNouveau")) remplirZonePub("pubNouveau", 1);
+  if (document.getElementById("pubAuth")) remplirZonePub("pubAuth", "inscription", 0);
+  if (document.getElementById("pubNouveau")) remplirZonePub("pubNouveau", "nouveau", 1);
 });
 
 /* ---------- Popup pub (1 fois par jour max) ---------- */
 async function verifierAnnonce() {
   const pubs = await chargerPubsFenetres();
-  if (!pubs.length) return;
+  const liste = pubsPourEspace(pubs, "accueil");
+  if (!liste.length) return;
   const jour = Math.floor(Date.now() / 86400000);
-  const a = pubs[jour % pubs.length];
+  const a = liste[jour % liste.length];
   const vu = JSON.parse(localStorage.getItem("tsiky_pub_vu") || "{}");
   if (vu.id === a.id && vu.jour === new Date().toDateString()) return;
   let lienOk = null;
@@ -905,6 +913,8 @@ async function verifierAnnonce() {
 }
 
 /* ---------- Espace admin ---------- */
+const NOMS_EMPLACEMENTS = { accueil: "Popup accueil", inscription: "Fen. inscription", nouveau: "Nouv. discussion", toutes: "Partout" };
+
 function afficherAdmin() {
   app.innerHTML = `
     <h1>Admin</h1>
@@ -917,6 +927,13 @@ function afficherAdmin() {
     <input id="aImage" type="file" accept="image/*">
     <label>Lien à ouvrir (optionnel)</label>
     <input id="aLien" type="url" placeholder="https://namako.workers.dev">
+    <label>Où la publier ? (la pub reste dans cet espace)</label>
+    <select id="aEmpl">
+      <option value="accueil">Popup de l'accueil</option>
+      <option value="inscription">Fenêtre d'inscription (nouveaux visiteurs)</option>
+      <option value="nouveau">Écran nouvelle discussion</option>
+      <option value="toutes">Partout (tourne dans les 3 espaces)</option>
+    </select>
     <button id="btnPublier">Publier l'annonce</button>
     <p class="erreur" id="err"></p>
     <p class="info" id="ok"></p>
@@ -944,10 +961,9 @@ async function publierAnnonce() {
     image_url = sb.storage.from("pubs").getPublicUrl(chemin).data.publicUrl;
   }
   err.textContent = "Enregistrement…";
-  let { error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null });
-  if (error && /emplacement/i.test(error.message || "")) {
-    ({ error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null, emplacement: "toutes" }));
-  }
+  const { error } = await sb.from("annonces").insert({
+    titre, message, image_url, lien: aLien.value.trim() || null, emplacement: aEmpl.value
+  });
   if (error) { err.textContent = error.message; return; }
   cachePubs = null; cachePubsLe = 0;
   document.getElementById("ok").textContent = "Annonce publiée";
@@ -963,13 +979,20 @@ async function chargerListe() {
   data?.forEach(a => {
     const div = document.createElement("div");
     div.className = "annonce";
+    const optionsEspace = ["accueil", "inscription", "nouveau", "toutes"]
+      .map(e => `<option value="${e}" ${a.emplacement === e ? "selected" : ""}>${NOMS_EMPLACEMENTS[e]}</option>`).join("");
     div.innerHTML = `
       <h3>${a.titre}</h3>
       <p>${a.message}</p>
       <div class="ligne">
         <span class="badge ${a.actif ? "on" : "off"}">${a.actif ? "ACTIVE" : "MASQUÉE"}</span>
+        <span class="badge" style="background:var(--secondaire);color:var(--texte)">${NOMS_EMPLACEMENTS[a.emplacement] || "Partout"}</span>
         <button class="mini secondaire" id="tg-${a.id}">${a.actif ? "Masquer" : "Activer"}</button>
         <button class="mini secondaire" id="del-${a.id}">🗑️</button>
+      </div>
+      <div class="ligne" style="margin-top:8px;align-items:center">
+        <span style="font-size:12px;color:var(--texte2)">Emplacement :</span>
+        <select id="empl-${a.id}" style="font-size:12px;padding:5px 6px;max-width:170px">${optionsEspace}</select>
       </div>`;
     liste.appendChild(div);
     document.getElementById("tg-" + a.id).onclick = async () => {
@@ -978,6 +1001,11 @@ async function chargerListe() {
     };
     document.getElementById("del-" + a.id).onclick = async () => {
       if (confirm("Supprimer cette annonce ?")) { await sb.from("annonces").delete().eq("id", a.id); chargerListe(); }
+    };
+    document.getElementById("empl-" + a.id).onchange = async (e) => {
+      await sb.from("annonces").update({ emplacement: e.target.value }).eq("id", a.id);
+      cachePubs = null; cachePubsLe = 0;
+      chargerListe();
     };
   });
 }
