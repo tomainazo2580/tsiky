@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- Tsiky v23 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v23 ».
-     Pubs : chaque annonce a un EMPLACEMENT choisi à la création (popup accueil /
-     fenêtre inscription / nouvelle discussion). Elle reste dans SON espace.
-     Rotation quotidienne à l'intérieur de l'espace si plusieurs annonces. -->
+<!-- Tsiky v24 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v24 ».
+     Pubs : EMPLACEMENT choisi à la création (popup accueil / fenêtre inscription /
+     nouvelle discussion) + rotation quotidienne à l'intérieur de chaque espace.
+     Apparence des bandeaux : style v20 (photo + titre + message + bouton Découvrir). -->
 <html lang="fr" data-theme="jour">
 <head>
 <meta charset="UTF-8">
@@ -150,11 +150,12 @@
   #footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: 11px; font-size: 12px; color: var(--texte2); background: var(--fond); z-index: 96; }
   #footer a { color: var(--primaire); cursor: pointer; font-weight: 600; }
   .zonePub { display: none; margin: 0 0 14px; }
-  .bandeauPub { position: relative; display: block; width: 100%; height: 110px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, var(--primaire), rgba(0,0,0,.55)), var(--primaire); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-  .bandeauPub img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .bandeauPub .txtBandeau { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 14px; color: #fff; text-align: center; }
-  .bandeauPub .txtBandeau b { font-size: 16px; }
-  .bandeauPub .txtBandeau span { font-size: 13px; opacity: .92; }
+  .bannierePub { background: var(--champ); border: 1px solid var(--bordure); border-radius: 12px; padding: 10px; text-align: center; }
+  .imgBanPub { height: 20vh; min-height: 110px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; margin-bottom: 8px; }
+  .imgBanPub img { width: 100%; height: 100%; object-fit: cover; }
+  .bannierePub h3 { font-size: 15px; color: var(--primaire); }
+  .bannierePub p { font-size: 13px; color: var(--texte2); margin: 4px 0 8px; }
+  .bannierePub .btnLienPub { margin-top: 6px; padding: 10px; font-size: 14px; }
   .zoomVoile { position: fixed; inset: 0; background: rgba(5,10,20,.92); display: flex; align-items: center; justify-content: center; z-index: 200; cursor: zoom-out; }
   .zoomVoile img { max-width: 94vw; max-height: 84vh; object-fit: contain; border-radius: 10px; }
   .clicPhoto { cursor: zoom-in; }
@@ -165,7 +166,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v23</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v24</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -849,10 +850,12 @@ function lienCorrect(l) {
 }
 
 function contenuBandeauPub(a) {
+  const lien = lienCorrect(a.lien);
   let c = "";
-  if (a.image_url) c += `<img src="${a.image_url}" alt="Publicité">`;
-  else c += `<div class="txtBandeau"><b>${a.titre}</b><span>${a.message}</span></div>`;
-  return c;
+  if (a.image_url) c += `<div class="imgBanPub"><img src="${a.image_url}" alt="Publicité"></div>`;
+  c += `<h3>${a.titre}</h3><p>${a.message}</p>`;
+  if (lien) c += `<a class="btnLienPub" href="${lien}" target="_blank" rel="noopener">Découvrir</a>`;
+  return `<div class="bannierePub">${c}</div>`;
 }
 
 /* Annonces d'un espace = celles marquées pour cet espace (+ "toutes" pour compat) */
@@ -868,10 +871,7 @@ async function remplirZonePub(idZone, espace, rang) {
   if (!liste.length) { zone.innerHTML = ""; zone.style.display = "none"; return; }
   const jour = Math.floor(Date.now() / 86400000);
   const a = liste[(jour + rang) % liste.length];
-  const lien = lienCorrect(a.lien);
-  zone.innerHTML = lien
-    ? `<a class="bandeauPub" href="${lien}" target="_blank" rel="noopener">${contenuBandeauPub(a)}</a>`
-    : `<div class="bandeauPub">${contenuBandeauPub(a)}</div>`;
+  zone.innerHTML = contenuBandeauPub(a);
   zone.style.display = "block";
 }
 
