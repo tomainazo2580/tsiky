@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Tsiky v22 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v22 ». -->
 <html lang="fr" data-theme="jour">
 <head>
 <meta charset="UTF-8">
@@ -87,7 +89,7 @@
   h2 { color: var(--primaire); font-size: 17px; margin-top: 20px; }
   .sous { text-align: center; color: var(--texte2); font-size: 14px; margin-bottom: 16px; }
   label { display: block; font-size: 13px; color: var(--texte); margin: 12px 0 4px; font-weight: 600; }
-  input, textarea, select { width: 100%; padding: 12px; border: 1px solid var(--bordure); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--champ); color: var(--texte); }
+  input, textarea { width: 100%; padding: 12px; border: 1px solid var(--bordure); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--champ); color: var(--texte); }
   textarea { min-height: 70px; resize: vertical; }
   button { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: var(--primaire); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
   button.secondaire { background: var(--secondaire); color: var(--texte); }
@@ -97,12 +99,12 @@
   .centre { text-align: center; margin: 10px 0; }
   .avatar, .rond { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
   .rond { background: var(--bulleAutre); color: var(--primaire); display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; }
-  .btnModifPhoto { background: var(--secondaire); color: var(--texte); font-weight: 600; font-size: 13px; padding: 7px 12px; margin-top: 8px; width: auto; display: inline-block; border-radius: 99px; }
+  .btnModifPhoto { background: var(--secondaire); color: var(--texte); font-weight: 600; font-size: 13px; padding: 7px 14px; margin-top: 8px; width: auto; display: inline-block; border-radius: 99px; }
   .numero { text-align: center; color: var(--texte2); font-size: 14px; background: var(--champ); border-radius: 10px; padding: 8px; margin: 10px 0; }
   .annonce { border: 1px solid var(--bordure); border-radius: 12px; padding: 12px; margin-top: 10px; }
   .annonce h3 { font-size: 15px; color: var(--primaire); }
   .annonce p { font-size: 13px; color: var(--texte2); margin: 4px 0; }
-  .ligne { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .ligne { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
   .on { background: rgba(43,138,62,.18); color: var(--ok); }
   .off { background: rgba(201,42,42,.15); color: var(--erreur); }
@@ -122,7 +124,7 @@
   .bulle { max-width: 80%; padding: 9px 13px; border-radius: 14px; font-size: 15px; word-wrap: break-word; }
   .bulle.autre { background: var(--bulleAutre); color: var(--texte); align-self: flex-start; border-bottom-left-radius: 4px; }
   .bulle.moi { background: var(--bulleMoi); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-  .bulle img { max-width: 100%; border-radius: 10px; display: block; margin-bottom: 4px; }
+  .bulle img { max-width: 100%; border-radius: 10px; display: block; margin-bottom: 4px; cursor: zoom-in; }
   .docLien { display: inline-block; max-width: 100%; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.15); color: #fff; font-weight: 600; text-decoration: none; word-break: break-all; font-size: 14px; }
   .bulle.autre .docLien { background: rgba(0,0,0,.06); color: var(--texte); }
   .heure { font-size: 10px; opacity: .75; text-align: right; margin-top: 3px; }
@@ -144,19 +146,24 @@
   .lienApp { font-size: 12px; color: var(--texte2); word-break: break-all; margin-bottom: 12px; }
   #footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: 11px; font-size: 12px; color: var(--texte2); background: var(--fond); z-index: 96; }
   #footer a { color: var(--primaire); cursor: pointer; font-weight: 600; }
-  .bannierePub { background: var(--champ); border: 1px solid var(--bordure); border-radius: 12px; padding: 10px; margin-bottom: 14px; text-align: center; }
-  .imgBanPub { height: 20vh; min-height: 110px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; margin-bottom: 8px; }
-  .imgBanPub img { width: 100%; height: 100%; object-fit: cover; }
-  .bannierePub h3 { font-size: 15px; color: var(--primaire); }
-  .bannierePub p { font-size: 13px; color: var(--texte2); margin: 4px 0 8px; }
-  .bannierePub .btnLienPub { margin-top: 6px; padding: 10px; font-size: 14px; }
+  .zonePub { display: none; margin: 0 0 14px; }
+  .bandeauPub { position: relative; display: block; width: 100%; height: 110px; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, var(--primaire), rgba(0,0,0,.55)), var(--primaire); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .bandeauPub img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bandeauPub .txtBandeau { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 14px; color: #fff; text-align: center; }
+  .bandeauPub .txtBandeau b { font-size: 16px; }
+  .bandeauPub .txtBandeau span { font-size: 13px; opacity: .92; }
+  .badgePub { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.45); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 99px; letter-spacing: .5px; }
+  .zoomVoile { position: fixed; inset: 0; background: rgba(5,10,20,.92); display: flex; align-items: center; justify-content: center; z-index: 200; cursor: zoom-out; }
+  .zoomVoile img { max-width: 94vw; max-height: 84vh; object-fit: contain; border-radius: 10px; }
+  .clicPhoto { cursor: zoom-in; }
+  .astucePhoto { text-align: center; font-size: 12px; color: var(--texte2); margin-top: 6px; }
 </style>
 </head>
 <body>
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v20</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v22</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -263,6 +270,28 @@ function compresserImage(fichier, max = 400) {
   });
 }
 
+/* ---------- Agrandir une photo (clic dessus) ---------- */
+function zoomPhoto(url) {
+  if (!url) return;
+  const v = document.createElement("div");
+  v.className = "zoomVoile";
+  v.innerHTML = `<img src="${url}" alt="Photo agrandie">`;
+  v.onclick = () => v.remove();
+  document.body.appendChild(v);
+}
+
+/* ---------- Envoi de fichier avec réessai (4G instable) ---------- */
+async function uploaderFiable(bucket, chemin, contenu, upsert) {
+  let derniere = null;
+  for (let i = 0; i < 3; i++) {
+    const { error } = await sb.storage.from(bucket).upload(chemin, contenu, upsert ? { upsert: true } : undefined);
+    if (!error) return null;
+    derniere = error;
+    await new Promise(r => setTimeout(r, 1200));
+  }
+  return derniere;
+}
+
 /* ---------- Sonnerie + vibration ---------- */
 function jouerAlerte() {
   try { if (navigator.vibrate) navigator.vibrate(150); } catch (e) {}
@@ -325,7 +354,7 @@ sb.auth.onAuthStateChange((_e, session) => {
 /* ---------- Écran : numéro + mot de passe ---------- */
 function afficherAuth() {
   app.innerHTML = `
-    <div id="zonePubAuth"></div>
+    <div class="zonePub" id="pubAuth"></div>
     <h1>Tsiky</h1>
     <p class="sous">Le chat léger de Madagascar</p>
     <label>Ton numéro</label>
@@ -337,10 +366,7 @@ function afficherAuth() {
     <p class="erreur" id="err"></p>`;
   btnInscrire.onclick = () => lancerAuth(true);
   btnConnecter.onclick = () => lancerAuth(false);
-  chargerBannierePub("inscription").then(html => {
-    const zone = document.getElementById("zonePubAuth");
-    if (zone && html) zone.innerHTML = html;
-  });
+  remplirZonePub("pubAuth", 0);
 }
 
 async function lancerAuth(inscription) {
@@ -401,7 +427,7 @@ function afficherCreationProfil() {
     let avatar_url = null;
     if (fichier) {
       const chemin = `${user.id}/avatar.jpg`;
-      const { error: errUp } = await sb.storage.from("avatars").upload(chemin, await compresserImage(fichier), { upsert: true });
+      const { error: errUp } = await uploaderFiable("avatars", chemin, await compresserImage(fichier), true);
       if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
       avatar_url = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl;
     }
@@ -440,9 +466,10 @@ function accueil(profil) {
   demarrerTempsReel();
   app.innerHTML = `
     <div class="centre">
-      ${profil.avatar_url ? `<img class="avatar" id="monAvatar" src="${profil.avatar_url}">` : `<span class="rond" id="monAvatar">${profil.pseudo[0].toUpperCase()}</span>`}
+      ${profil.avatar_url ? `<img class="avatar clicPhoto" id="monAvatar" src="${profil.avatar_url}" title="Agrandir">` : `<span class="rond" id="monAvatar">${profil.pseudo[0].toUpperCase()}</span>`}
+      ${profil.avatar_url ? `<p class="astucePhoto">Touche ta photo pour l'agrandir</p>` : ""}
       <br><button class="btnModifPhoto" id="btnChangerPhoto">Changer la photo</button>
-      <button class="btnModifPhoto" id="btnChangerPseudo">Changer le pseudo</button>
+      <button class="btnModifPhoto" id="btnChangerPseudo" style="margin-left:4px">Changer le pseudo</button>
     </div>
     <h1>Salama, ${profil.pseudo} !</h1>
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
@@ -452,7 +479,8 @@ function accueil(profil) {
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
   document.getElementById("btnChangerPhoto").onclick = () => changerPhoto(profil);
-  document.getElementById("btnChangerPseudo").onclick = () => changerPseudo(profil);
+  document.getElementById("btnChangerPseudo").onclick = () => renommerPseudo(profil);
+  if (profil.avatar_url) document.getElementById("monAvatar").onclick = () => zoomPhoto(profil.avatar_url);
   btnDisc.onclick = afficherDiscussions;
   btnNouvelle.onclick = afficherNouveauContact;
   btnPartager.onclick = afficherPartage;
@@ -489,7 +517,7 @@ function changerPhoto(profil) {
     if (!f) return;
     err.textContent = "Compression de la photo…";
     const chemin = `${user.id}/avatar.jpg`;
-    const { error: errUp } = await sb.storage.from("avatars").upload(chemin, await compresserImage(f), { upsert: true });
+    const { error: errUp } = await uploaderFiable("avatars", chemin, await compresserImage(f), true);
     if (errUp) { err.textContent = "Photo : " + errUp.message; return; }
     err.textContent = "Enregistrement…";
     const nouvelleUrl = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl + "?t=" + Date.now();
@@ -502,53 +530,34 @@ function changerPhoto(profil) {
 }
 
 /* ---------- Changer le pseudo ---------- */
-function changerPseudo(profil) {
+function renommerPseudo(profil) {
   const v = document.createElement("div");
   v.className = "voile";
   v.innerHTML = `
     <div class="popup">
-      <button class="croix" id="psFermer">✕</button>
+      <button class="croix" id="rpFermer">✕</button>
       <h2 style="margin-bottom:6px">Changer le pseudo</h2>
-      <input id="psNouveau" placeholder="Nouveau pseudo" value="${(profil.pseudo || "").replace(/"/g, "&quot;")}">
-      <button id="psValider">Enregistrer</button>
-      <button id="psAnnuler" class="secondaire">Annuler</button>
-      <p class="erreur" id="psErr"></p>
+      <input id="rpPseudo" maxlength="20" placeholder="Ton nouveau pseudo">
+      <button id="rpOk">Enregistrer</button>
+      <button id="rpQuitter" class="secondaire">Annuler</button>
+      <p class="erreur" id="rpErr"></p>
     </div>`;
   document.body.appendChild(v);
-  document.getElementById("psFermer").onclick = () => v.remove();
-  document.getElementById("psAnnuler").onclick = () => v.remove();
-  document.getElementById("psValider").onclick = async () => {
-    const err = document.getElementById("psErr");
-    const nouveau = document.getElementById("psNouveau").value.trim();
-    if (nouveau.length < 2) { err.textContent = "Le pseudo doit faire au moins 2 caractères."; return; }
+  const champ = document.getElementById("rpPseudo");
+  champ.value = profil.pseudo;
+  document.getElementById("rpFermer").onclick = () => v.remove();
+  document.getElementById("rpQuitter").onclick = () => v.remove();
+  document.getElementById("rpOk").onclick = async () => {
+    const err = document.getElementById("rpErr");
+    const nv = champ.value.trim().replace(/\s+/g, " ");
+    if (nv.length < 2) { err.textContent = "Le pseudo doit faire au moins 2 caractères."; return; }
     err.textContent = "Enregistrement…";
-    const { error } = await sb.from("profiles").update({ pseudo: nouveau }).eq("id", user.id);
-    if (error) { err.textContent = error.message; return; }
+    const { error } = await sb.from("profiles").update({ pseudo: nv }).eq("id", user.id);
+    if (error) { err.textContent = "Impossible : " + error.message; return; }
     v.remove();
     const { data: p } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
     if (p) accueil(p);
   };
-}
-
-/* ---------- Bannières pub intégrées (inscription / nouvelle discussion) ---------- */
-async function chargerBannierePub(emplacement) {
-  const { data } = await sb.from("annonces").select("*")
-    .eq("actif", true).eq("emplacement", emplacement)
-    .order("created_at", { ascending: false }).limit(1);
-  if (!data || !data.length) return "";
-  const a = data[0];
-  let lienOk = null;
-  if (a.lien && a.lien.trim()) {
-    lienOk = a.lien.trim();
-    if (!/^https?:\/\//i.test(lienOk)) lienOk = "https://" + lienOk;
-  }
-  return `
-    <div class="bannierePub">
-      ${a.image_url ? `<div class="imgBanPub"><img src="${a.image_url}"></div>` : ""}
-      <h3>${a.titre}</h3>
-      <p>${a.message}</p>
-      ${lienOk ? `<a class="btnLienPub" href="${lienOk}" target="_blank" rel="noopener">Découvrir</a>` : ""}
-    </div>`;
 }
 
 /* ---------- Partager Tsiky (QR code) ---------- */
@@ -637,6 +646,10 @@ async function afficherDiscussions() {
       ${nonLus[p.id] ? `<span class="pastille">${nonLus[p.id]}</span>` : ""}`;
     div.onclick = () => ouvrirConversation(p);
     cont.appendChild(div);
+    if (p.avatar_url) {
+      const im = div.querySelector("img");
+      if (im) { im.className = "clicPhoto"; im.onclick = (e) => { e.stopPropagation(); zoomPhoto(p.avatar_url); }; }
+    }
   });
 }
 
@@ -644,12 +657,13 @@ async function afficherDiscussions() {
 function afficherNouveauContact() {
   app.innerHTML = `
     <div class="entete"><button class="retour" id="retourAcc">←</button><span class="nom">Nouvelle discussion</span></div>
-    <div id="zonePubNouveau"></div>
+    <div class="zonePub" id="pubNouveau"></div>
     <label>Numéro de ton ami</label>
     <input id="numAmi" type="tel" placeholder="034 00 000 00">
     <button id="btnChercher">Chercher</button>
     <p class="erreur" id="err"></p>`;
   retourAcc.onclick = () => accueil(monProfil);
+  remplirZonePub("pubNouveau", 1);
   btnChercher.onclick = async () => {
     const err = document.getElementById("err");
     err.textContent = "";
@@ -661,10 +675,6 @@ function afficherNouveauContact() {
     if (!p) { err.textContent = "Aucun compte Tsiky avec ce numéro. Dis-lui de s'inscrire !"; return; }
     ouvrirConversation(p);
   };
-  chargerBannierePub("nouveau").then(html => {
-    const zone = document.getElementById("zonePubNouveau");
-    if (zone && html) zone.innerHTML = html;
-  });
 }
 
 /* ---------- Conversation ---------- */
@@ -676,7 +686,7 @@ async function ouvrirConversation(partenaire) {
   app.innerHTML = `
     <div class="entete">
       <button class="retour" id="retourDisc">←</button>
-      ${partenaire.avatar_url ? `<img src="${partenaire.avatar_url}">` : `<span class="rond-p">${partenaire.pseudo[0].toUpperCase()}</span>`}
+      ${partenaire.avatar_url ? `<img class="clicPhoto" id="avatarPair" src="${partenaire.avatar_url}" title="Agrandir">` : `<span class="rond-p">${partenaire.pseudo[0].toUpperCase()}</span>`}
       <span class="nom">${partenaire.pseudo}</span>
       <button class="btnBloc" id="btnBloc" title="Bloquer">${bloque ? "✅" : "🚫"}</button>
     </div>
@@ -693,6 +703,7 @@ async function ouvrirConversation(partenaire) {
         <input type="file" id="fichierDoc" accept="application/pdf,.pdf" hidden>
         <p class="erreur" id="errMsg"></p>`}`;
   retourDisc.onclick = afficherDiscussions;
+  if (partenaire.avatar_url) document.getElementById("avatarPair").onclick = () => zoomPhoto(partenaire.avatar_url);
   btnBloc.onclick = async () => {
     if (bloque) {
       await sb.from("blocks").delete().eq("blocker_id", user.id).eq("blocked_id", partenaire.id);
@@ -752,6 +763,8 @@ function ajouterBulle(m) {
   if (m.content && m.media_type !== "file") c += `<div>${m.content.replace(/</g, "&lt;")}</div>`;
   c += `<div class="heure">${h}</div>`;
   div.innerHTML = c;
+  const im = div.querySelector("img");
+  if (im && m.media_url) { im.className = "clicPhoto"; im.onclick = () => zoomPhoto(m.media_url); }
   zone.appendChild(div);
 }
 
@@ -780,8 +793,7 @@ async function envoyerDepuis(input) {
   if (!f) return;
   if (err) err.textContent = "Envoi de la photo…";
   const chemin = user.id + "/msg_" + Date.now() + ".jpg";
-  const { error: errUp } = await sb.storage.from("fichiers")
-    .upload(chemin, await compresserImage(f, 800));
+  const { error: errUp } = await uploaderFiable("fichiers", chemin, await compresserImage(f, 800), false);
   if (errUp) { if (err) err.textContent = "Photo : " + errUp.message; return; }
   const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
   const { data, error } = await sb.from("messages").insert({
@@ -803,7 +815,7 @@ async function envoyerDocument() {
   if (err) err.textContent = "Envoi du document…";
   const nomPropre = (f.name || "document.pdf").replace(/[^\w.\-() ]/g, "_");
   const chemin = user.id + "/doc_" + Date.now() + "_" + nomPropre;
-  const { error: errUp } = await sb.storage.from("fichiers").upload(chemin, f);
+  const { error: errUp } = await uploaderFiable("fichiers", chemin, f, false);
   if (errUp) { if (err) err.textContent = "Document : " + errUp.message; input.value = ""; return; }
   const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
   const { data, error } = await sb.from("messages").insert({
@@ -816,13 +828,59 @@ async function envoyerDocument() {
   defilerBas();
 }
 
-/* ---------- Popup pub (accueil, 1 fois par jour max) ---------- */
-async function verifierAnnonce() {
+/* ---------- Bandeaux pub (fenêtre inscription + nouvelle discussion) ---------- */
+let cachePubs = null, cachePubsLe = 0;
+
+async function chargerPubsFenetres() {
+  if (cachePubs && Date.now() - cachePubsLe < 6 * 3600 * 1000) return cachePubs;
   const { data } = await sb.from("annonces").select("*").eq("actif", true)
-    .eq("emplacement", "accueil")
-    .order("created_at", { ascending: false }).limit(1);
-  if (!data || !data.length) return;
-  const a = data[0];
+    .order("created_at", { ascending: false });
+  cachePubs = data || [];
+  cachePubsLe = Date.now();
+  return cachePubs;
+}
+
+function lienCorrect(l) {
+  const l2 = (l || "").trim();
+  if (!l2) return null;
+  return /^https?:\/\//i.test(l2) ? l2 : "https://" + l2;
+}
+
+function contenuBandeauPub(a) {
+  let c = "";
+  if (a.image_url) c += `<img src="${a.image_url}" alt="Publicité">`;
+  else c += `<div class="txtBandeau"><b>${a.titre}</b><span>${a.message}</span></div>`;
+  c += `<span class="badgePub">Pub</span>`;
+  return c;
+}
+
+async function remplirZonePub(idZone, rang) {
+  const zone = document.getElementById(idZone);
+  if (!zone) return;
+  const pubs = await chargerPubsFenetres();
+  if (!pubs.length) return;
+  const jour = Math.floor(Date.now() / 86400000);
+  const a = pubs[(jour + rang) % pubs.length];
+  const lien = lienCorrect(a.lien);
+  zone.innerHTML = lien
+    ? `<a class="bandeauPub" href="${lien}" target="_blank" rel="noopener">${contenuBandeauPub(a)}</a>`
+    : `<div class="bandeauPub">${contenuBandeauPub(a)}</div>`;
+  zone.style.display = "block";
+}
+
+/* ---------- Rafraîchit les bandeaux quand on revient sur l'app ---------- */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (document.getElementById("pubAuth")) remplirZonePub("pubAuth", 0);
+  if (document.getElementById("pubNouveau")) remplirZonePub("pubNouveau", 1);
+});
+
+/* ---------- Popup pub (1 fois par jour max) ---------- */
+async function verifierAnnonce() {
+  const pubs = await chargerPubsFenetres();
+  if (!pubs.length) return;
+  const jour = Math.floor(Date.now() / 86400000);
+  const a = pubs[jour % pubs.length];
   const vu = JSON.parse(localStorage.getItem("tsiky_pub_vu") || "{}");
   if (vu.id === a.id && vu.jour === new Date().toDateString()) return;
   let lienOk = null;
@@ -847,8 +905,6 @@ async function verifierAnnonce() {
 }
 
 /* ---------- Espace admin ---------- */
-const NOMS_EMPLACEMENTS = { accueil: "Accueil", inscription: "Inscription", nouveau: "Nouv. discussion" };
-
 function afficherAdmin() {
   app.innerHTML = `
     <h1>Admin</h1>
@@ -861,12 +917,6 @@ function afficherAdmin() {
     <input id="aImage" type="file" accept="image/*">
     <label>Lien à ouvrir (optionnel)</label>
     <input id="aLien" type="url" placeholder="https://namako.workers.dev">
-    <label>Emplacement</label>
-    <select id="aEmpl">
-      <option value="accueil">Popup de l'accueil</option>
-      <option value="inscription">Écran d'inscription (nouveaux visiteurs)</option>
-      <option value="nouveau">Écran nouvelle discussion</option>
-    </select>
     <button id="btnPublier">Publier l'annonce</button>
     <p class="erreur" id="err"></p>
     <p class="info" id="ok"></p>
@@ -889,15 +939,17 @@ async function publierAnnonce() {
     const imageCompacte = await compresserImage(aImage.files[0], 600);
     err.textContent = "Envoi de l'image (10-30 s, patiente)…";
     const chemin = `${user.id}/annonce_${Date.now()}.jpg`;
-    const { error: errUp } = await sb.storage.from("pubs").upload(chemin, imageCompacte, { upsert: true });
-    if (errUp) { err.textContent = "Image : " + errUp.message; return; }
+    const { error: errUp } = await uploaderFiable("pubs", chemin, imageCompacte, true);
+    if (errUp) { err.textContent = "Image : " + errUp.message + " — vérifie ta connexion puis réessaie."; return; }
     image_url = sb.storage.from("pubs").getPublicUrl(chemin).data.publicUrl;
   }
   err.textContent = "Enregistrement…";
-  const { error } = await sb.from("annonces").insert({
-    titre, message, image_url, lien: aLien.value.trim() || null, emplacement: aEmpl.value
-  });
+  let { error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null });
+  if (error && /emplacement/i.test(error.message || "")) {
+    ({ error } = await sb.from("annonces").insert({ titre, message, image_url, lien: aLien.value.trim() || null, emplacement: "toutes" }));
+  }
   if (error) { err.textContent = error.message; return; }
+  cachePubs = null; cachePubsLe = 0;
   document.getElementById("ok").textContent = "Annonce publiée";
   err.textContent = "";
   aTitre.value = ""; aMessage.value = ""; aLien.value = ""; aImage.value = "";
@@ -905,6 +957,7 @@ async function publierAnnonce() {
 }
 
 async function chargerListe() {
+  cachePubs = null; cachePubsLe = 0;
   const { data } = await sb.from("annonces").select("*").order("created_at", { ascending: false });
   liste.innerHTML = data?.length ? "" : `<p style="color:var(--texte2);font-size:14px">Aucune annonce pour l'instant.</p>`;
   data?.forEach(a => {
@@ -915,7 +968,6 @@ async function chargerListe() {
       <p>${a.message}</p>
       <div class="ligne">
         <span class="badge ${a.actif ? "on" : "off"}">${a.actif ? "ACTIVE" : "MASQUÉE"}</span>
-        <span class="badge" style="background:var(--secondaire);color:var(--texte)">${NOMS_EMPLACEMENTS[a.emplacement] || "Accueil"}</span>
         <button class="mini secondaire" id="tg-${a.id}">${a.actif ? "Masquer" : "Activer"}</button>
         <button class="mini secondaire" id="del-${a.id}">🗑️</button>
       </div>`;
