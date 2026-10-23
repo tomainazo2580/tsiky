@@ -1,19 +1,25 @@
 <!DOCTYPE html>
-<!-- Tsiky v27 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v27 ».
-     v27 : AUDIT COMPLET ligne par ligne. 1) MISE À JOUR AUTOMATIQUE — l'app se
-     recharge toute seule quand une nouvelle version arrive (avant, il fallait
-     recharger DEUX fois : beaucoup testaient sans le savoir l'ancienne version).
-     2) Compression blindée : toBlob sous son propre timeout, refus CLAIR avant
-     l'envoi si la photo originale dépasse 4 Mo et que la compression échoue.
-     3) Anti double-envoi (2 taps rapides = 1 seul envoi). 4) Messages rechargés
-     au retour sur l'app (réceptions manquées en arrière-plan). 5) Erreurs en
-     français sur TOUS les chargements. 6) supabase-js épinglé (plus de surprise
-     CDN). Le moteur est vérifié au démarrage (message clair si CDN indisponible).
-     v26 : filet global fetchFiable (30 s base/auth, 75 s fichiers) + secondes
-     en direct (« essai 1/3 · 12 s »).
-     v25 : uploads réparés — rejets rattrapés (.catch), timeout 45 s par essai,
-     progression « essai N/3 ».
+<!-- Tsiky v29 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v29 ».
+     v28 : ENVOIS SUR RÉSEAU DIFFICILE (l'indice du PDF de 2 Mo). 1) PROGRESSION
+     RÉELLE pendant l'envoi : « essai 1/3 · 42 % · 0,8/2 Mo » — avant, un simple
+     compteur de secondes, impossible de savoir si ça avançait vraiment.
+     2) Temps d'envoi ADAPTÉ À LA TAILLE : 45 s + 1 min par Mo au-delà du premier
+     (un PDF de 2 Mo dispose de 2 min 45 par essai au lieu de 45 s — sur un
+     réseau qui rame, les gros fichiers n'étaient plus condamnés d'avance).
+     3) Connexion MORTE détectée en 30 s sans octet passé → réessai immédiat au
+     lieu d'attendre la fin du délai. 4) Bouton « Diagnostic » en bas : teste la
+     connexion, le serveur, le stockage puis un VRAI envoi de 5 Ko — dit
+     précisément où ça bloque (capture d'écran au développeur en cas de souci).
+     5) Vérification de nouvelle version au retour sur l'app + chaque minute
+     (jamais pendant un envoi) — même laissée ouverte, l'app se met à jour.
+     6) Historique plafonné (500 derniers messages par discussion, liste des
+     discussions légère) — le téléphone reste rapide après des mois d'usage.
+     7) Noms de documents PDF nettoyés (plus d'espaces dans les liens).
+     v27 : mise à jour automatique, compression blindée, anti double-envoi,
+     erreurs en français partout, moteur supabase-js épinglé.
+     v26 : filet global fetchFiable (30 s base/auth, 75 s fichiers).
+     v25 : uploads réparés — rejets rattrapés, progression par essai.
      Pubs : EMPLACEMENT choisi à la création + rotation quotidienne par espace.
      Apparence des bandeaux : style v20 (photo + titre + message + bouton Découvrir). -->
 <html lang="fr" data-theme="jour">
@@ -99,6 +105,10 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; padding-bottom: 48px; transition: background .25s, color .25s; }
+  /* v29 : sur les petits écrans, le contenu part du HAUT et réserve 64px pour le
+     pied de page — avant, le bouton « Créer mon compte » pouvait passer SOUS le
+     pied de page et le clic n'atteignait pas le bouton (vu au test réel). */
+  @media (max-height: 720px) { body { align-items: flex-start; padding-bottom: 64px; } }
   .card { background: var(--carte); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.10); }
   h1 { color: var(--primaire); text-align: center; margin-bottom: 4px; font-size: 26px; }
   h2 { color: var(--primaire); font-size: 17px; margin-top: 20px; }
@@ -178,7 +188,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v27</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v29</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -216,6 +226,22 @@ const zonePopup = document.getElementById("zonePopup");
 let user = null, monProfil = null, partenaireActuel = null, canal = null;
 let nonLus = {};
 let envoiEnCours = false; /* v27 : anti double-envoi */
+
+/* v29 : DERNIER FILET — une erreur inattendue doit s'AFFICHER, jamais tuer
+   l'écran en silence (le gel de la v25-v28 sur « essai 1/3 » ne doit plus
+   être possible, quel que soit le bug futur). */
+function afficherPlantage(msg) {
+  try {
+    const z = document.getElementById("errMsg") || document.getElementById("err");
+    if (z) z.textContent = "Erreur inattendue — réessaie. (" + msg + ")";
+  } catch (e2) {}
+}
+window.addEventListener("unhandledrejection", (e) => {
+  afficherPlantage((e.reason && e.reason.message) || String(e.reason));
+});
+window.addEventListener("error", (e) => {
+  if (e && e.message && e.target === window) afficherPlantage(e.message);
+});
 
 const URL_APP = location.origin + location.pathname.replace(/index\.html$/, "");
 
@@ -336,11 +362,12 @@ function zoomPhoto(url) {
   document.body.appendChild(v);
 }
 
-/* ---------- Envoi de fichier avec réessai (4G instable) — v25 ---------- */
-/* v25 : AVANT, une coupure réseau pendant l'envoi rejetait la promesse sans passer
-   par les réessais → l'écran restait figé sur « Compression de la photo… » sans
-   jamais prévenir. Maintenant : rejets rattrapés (.catch), 45 s max par essai,
-   progression affichée, et message d'erreur compréhensible. */
+/* ---------- Envoi de fichier avec réessai (4G instable) — v25→v28 ---------- */
+/* v25 : rejets réseau rattrapés, timeout par essai, progression affichée.
+   v28 : envoi direct en XHR — la SEULE façon d'obtenir une PROGRESSION RÉELLE
+   (le fetch utilisé par supabase-js ne donne aucune progression d'envoi).
+   Binou voit désormais « essai 1/3 · 42 % · 0,8/2 Mo » bouger octet par octet :
+   plus jamais un envoi qui SEMBLE figé alors qu'il travaille. */
 function erreurFrancaise(e) {
   const m = (e && e.message ? e.message : String(e || "")).toLowerCase();
   if (m.includes("fetch") || m.includes("network") || m.includes("timeout") || m.includes("abort") || m.includes("load failed") || m.includes("coupé"))
@@ -354,41 +381,100 @@ function erreurFrancaise(e) {
   return (e && e.message) ? e.message : "erreur inconnue";
 }
 
-function uploadAvecDelai(bucket, chemin, contenu, opts) {
+/* v28 : temps d'envoi ADAPTÉ À LA TAILLE du fichier — 45 s de base + 1 minute
+   par Mo au-delà du premier, plafond 5 min. Un PDF de 2 Mo dispose ainsi de
+   2 min 45 par essai (avant : 45 s fixes — condamné d'avance sur réseau lent). */
+function delaiEnvoi(taille) {
+  const mo = Math.max(1, Math.ceil((taille || 0) / 1048576));
+  return Math.min(300000, 45000 + (mo - 1) * 60000);
+}
+
+function uploadAvecDelai(bucket, chemin, contenu, upsert, surProgres) {
   return new Promise((resolu) => {
-    const minuteur = setTimeout(() => resolu({ error: new Error("timeout réseau") }), 45000);
-    sb.storage.from(bucket).upload(chemin, contenu, opts).then(r => {
-      clearTimeout(minuteur);
-      resolu({ error: r.error || null });
-    }).catch(e => {
-      clearTimeout(minuteur);
-      resolu({ error: new Error(String(e && e.message ? e.message : "Failed to fetch")) });
-    });
+    sb.auth.getSession().then(({ data }) => {
+      const jeton = data && data.session ? data.session.access_token : null;
+      if (!jeton) { resolu({ error: new Error("session expirée") }); return; }
+      const cible = SUPABASE_URL + "/storage/v1/object/" + bucket + "/" +
+        chemin.split("/").map(encodeURIComponent).join("/");
+      const xhr = new XMLHttpRequest();
+      let fini = false;
+      let dernierFlot = Date.now();
+      const terminer = (err) => {
+        if (fini) return;
+        fini = true;
+        clearTimeout(minuteur);
+        clearInterval(surveillance);
+        try { xhr.abort(); } catch (e2) {}
+        resolu({ error: err || null });
+      };
+      const minuteur = setTimeout(() => terminer(new Error("timeout réseau")), delaiEnvoi(contenu && contenu.size));
+      /* v28 : connexion MORTE détectée en 30 s sans le moindre octet passé →
+         on lâche cet essai tout de suite au lieu d'attendre la fin du délai */
+      const surveillance = setInterval(() => {
+        if (Date.now() - dernierFlot > 30000) terminer(new Error("envoi bloqué — le réseau ne fait plus passer les données"));
+      }, 5000);
+      xhr.open("POST", cible, true);
+      xhr.setRequestHeader("Authorization", "Bearer " + jeton);
+      xhr.setRequestHeader("apikey", SUPABASE_KEY);
+      xhr.setRequestHeader("Content-Type", (contenu && contenu.type) || "application/octet-stream");
+      if (upsert) xhr.setRequestHeader("x-upsert", "true");
+      xhr.upload.onprogress = (ev) => {
+        dernierFlot = Date.now();
+        if (surProgres && ev.lengthComputable) surProgres(ev.loaded, ev.total);
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) { terminer(null); return; }
+        let msg = "erreur " + xhr.status;
+        try {
+          const j = JSON.parse(xhr.responseText);
+          if (j && j.message) msg = j.message;
+          else if (j && j.error) msg = j.error;
+        } catch (e3) {}
+        terminer(new Error(msg));
+      };
+      xhr.onerror = () => terminer(new Error("Failed to fetch"));
+      xhr.onabort = () => terminer(new Error("timeout réseau"));
+      xhr.send(contenu);
+    }).catch((e) => resolu({ error: e instanceof Error ? e : new Error(String(e)) }));
   });
 }
 
-/* v26 : secondes en direct pendant l'envoi — plus jamais un écran qui semble mort */
-function txtEssai(prefixe, n, s) {
-  return prefixe + " essai " + n + "/3" + (s >= 3 ? " · " + s + " s" : "");
+/* v26 : secondes en direct pendant l'envoi — plus jamais un écran qui semble mort.
+   v28 : quand la progression réelle est connue, on affiche « 42 % · 0,8/2 Mo »
+   à la place des secondes (bien plus parlant qu'un chrono). */
+function txtEssai(prefixe, n, s, pct) {
+  const suite = pct || (s >= 3 ? s + " s" : "");
+  return prefixe + " essai " + n + "/3" + (suite ? " · " + suite : "");
 }
 
 async function uploaderFiable(bucket, chemin, contenu, upsert, statut) {
-  const opts = upsert ? { upsert: true } : undefined;
+  /* v29 : renvoie TOUJOURS { error } — avant, le succès renvoyait null et les
+     5 écrans qui font « const { error } = await uploaderFiable(...) » PLANTAIENT
+     sur « Cannot destructure property 'error' of null » : l'envoi RÉUSSISSAIT
+     (le fichier partait vraiment) puis l'écran gèlait en silence sur « essai 1/3 ».
+     C'était LE bug qui bloquait photo, galerie et PDF depuis la v25. */
   let derniere = null;
   for (let i = 0; i < 3; i++) {
     let tic = null;
+    let pctTxt = "";
     if (statut) {
       const debut = Date.now();
-      statut(i + 1, 0);
-      tic = setInterval(() => statut(i + 1, Math.round((Date.now() - debut) / 1000)), 1000);
+      statut(i + 1, 0, "");
+      tic = setInterval(() => statut(i + 1, Math.round((Date.now() - debut) / 1000), pctTxt), 1000);
     }
-    const { error } = await uploadAvecDelai(bucket, chemin, contenu, opts);
+    const { error } = await uploadAvecDelai(bucket, chemin, contenu, upsert, (charges, total) => {
+      if (!total) { pctTxt = Math.round(charges / 1024) + " Ko"; return; }
+      const pct = Math.round(charges * 100 / total);
+      pctTxt = total >= 1048576
+        ? pct + " % · " + (charges / 1048576).toFixed(1).replace(".", ",") + "/" + (total / 1048576).toFixed(1).replace(".", ",") + " Mo"
+        : pct + " %";
+    });
     if (tic) clearInterval(tic);
-    if (!error) return null;
+    if (!error) return { error: null }; /* v29 : plus jamais null nu */
     derniere = error;
     await new Promise(r => setTimeout(r, 1200));
   }
-  return derniere;
+  return { error: derniere }; /* v29 : même forme { error } en cas d'échec */
 }
 
 /* ---------- Sonnerie + vibration ---------- */
@@ -546,7 +632,7 @@ function afficherCreationProfil() {
       let contenuAvatar = null;
       try { contenuAvatar = await compresserImage(fichier); }
       catch (e) { err.textContent = erreurFrancaise(e); return; }
-      const { error: errUp } = await uploaderFiable("avatars", chemin, contenuAvatar, true, (n, s) => { err.textContent = txtEssai("Envoi de la photo…", n, s); });
+      const { error: errUp } = await uploaderFiable("avatars", chemin, contenuAvatar, true, (n, s, pct) => { err.textContent = txtEssai("Envoi de la photo…", n, s, pct); });
       if (errUp) { err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
       avatar_url = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl;
     }
@@ -741,10 +827,11 @@ async function afficherDiscussions() {
   retourAcc.onclick = () => accueil(monProfil);
   btnNouveau.onclick = afficherNouveauContact;
   await recalculerNonLus();
+  /* v28 : plafond 2000 messages récents — la liste reste légère après des mois */
   const { data: msgs, error: errMsgs } = await sb.from("messages")
     .select("sender_id,receiver_id,created_at")
     .or("sender_id.eq." + user.id + ",receiver_id.eq." + user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).limit(2000);
   const ordre = [], vus = new Set();
   (msgs || []).forEach(m => {
     const pid = m.sender_id === user.id ? m.receiver_id : m.sender_id;
@@ -836,12 +923,16 @@ async function ouvrirConversation(partenaire) {
   retourDisc.onclick = afficherDiscussions;
   if (partenaire.avatar_url) document.getElementById("avatarPair").onclick = () => zoomPhoto(partenaire.avatar_url);
   btnBloc.onclick = async () => {
+    let errBloc2 = null; /* v28 : un blocage raté n'est plus silencieux */
     if (bloque) {
-      await sb.from("blocks").delete().eq("blocker_id", user.id).eq("blocked_id", partenaire.id);
+      const r = await sb.from("blocks").delete().eq("blocker_id", user.id).eq("blocked_id", partenaire.id);
+      errBloc2 = r.error;
     } else {
       if (!confirm("Bloquer " + partenaire.pseudo + " ? Il ne pourra plus t'écrire.")) return;
-      await sb.from("blocks").insert({ blocker_id: user.id, blocked_id: partenaire.id });
+      const r = await sb.from("blocks").insert({ blocker_id: user.id, blocked_id: partenaire.id });
+      errBloc2 = r.error;
     }
+    if (errBloc2) { alert("Impossible : " + erreurFrancaise(errBloc2)); return; }
     ouvrirConversation(partenaire);
   };
   if (bloque) return;
@@ -853,9 +944,11 @@ async function ouvrirConversation(partenaire) {
   fichierMsg.onchange = () => envoyerDepuis(fichierMsg);
   fichierCam.onchange = () => envoyerDepuis(fichierCam);
   fichierDoc.onchange = envoyerDocument;
+  /* v28 : les 500 messages les plus RÉCENTS seulement (ordre inversé ensuite) —
+     un téléphone reste rapide même après des mois de discussion */
   const { data: msgs, error: errMsgs } = await sb.from("messages").select("*")
     .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaire.id + "),and(sender_id.eq." + partenaire.id + ",receiver_id.eq." + user.id + ")")
-    .order("created_at");
+    .order("created_at", { ascending: false }).limit(500);
   const zone = document.getElementById("zoneMsgs");
   if (!zone) return;
   if (errMsgs) {
@@ -863,7 +956,7 @@ async function ouvrirConversation(partenaire) {
     return;
   }
   zone.innerHTML = "";
-  (msgs || []).forEach(ajouterBulle);
+  (msgs || []).reverse().forEach(ajouterBulle);
   defilerBas();
   marquerLu(partenaire.id);
 }
@@ -920,11 +1013,11 @@ async function rafraichirConversation() {
   if (!zone || !document.getElementById("txtMsg")) return;
   const { data: msgs, error } = await sb.from("messages").select("*")
     .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaireActuel.id + "),and(sender_id.eq." + partenaireActuel.id + ",receiver_id.eq." + user.id + ")")
-    .order("created_at");
+    .order("created_at", { ascending: false }).limit(500);
   if (error || !msgs) return;
   if (msgs.length !== zone.querySelectorAll(".bulle").length) {
     zone.innerHTML = "";
-    msgs.forEach(ajouterBulle);
+    msgs.reverse().forEach(ajouterBulle);
     defilerBas();
     marquerLu(partenaireActuel.id);
   }
@@ -965,7 +1058,7 @@ async function envoyerDepuis(input) {
     try { contenu = await compresserImage(f, 800); }
     catch (e) { if (err) err.textContent = erreurFrancaise(e); return; }
     const chemin = user.id + "/msg_" + Date.now() + ".jpg";
-    const { error: errUp } = await uploaderFiable("fichiers", chemin, contenu, false, (n, s) => { if (err) err.textContent = txtEssai("Envoi…", n, s); });
+    const { error: errUp } = await uploaderFiable("fichiers", chemin, contenu, false, (n, s, pct) => { if (err) err.textContent = txtEssai("Envoi…", n, s, pct); });
     if (errUp) { if (err) err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
     if (err) err.textContent = "Enregistrement du message…";
     const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
@@ -988,9 +1081,10 @@ async function envoyerDocument() {
   try {
     if (f.size > 10 * 1024 * 1024) { if (err) err.textContent = "Fichier trop lourd — 10 Mo maximum."; return; }
     if (err) err.textContent = "Envoi du document…";
-    const nomPropre = (f.name || "document.pdf").replace(/[^\w.\-() ]/g, "_");
+    /* v28 : plus d'espaces dans les noms — les liens des documents restent propres */
+    const nomPropre = (f.name || "document.pdf").replace(/[^\w.\-()]/g, "_");
     const chemin = user.id + "/doc_" + Date.now() + "_" + nomPropre;
-    const { error: errUp } = await uploaderFiable("fichiers", chemin, f, false, (n, s) => { if (err) err.textContent = txtEssai("Envoi du document…", n, s); });
+    const { error: errUp } = await uploaderFiable("fichiers", chemin, f, false, (n, s, pct) => { if (err) err.textContent = txtEssai("Envoi du document…", n, s, pct); });
     if (errUp) { if (err) err.textContent = "Document : " + erreurFrancaise(errUp); return; }
     if (err) err.textContent = "Enregistrement du message…";
     const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
@@ -1131,7 +1225,7 @@ async function publierAnnonce() {
     try { imageCompacte = await compresserImage(aImage.files[0], 600); }
     catch (e) { err.textContent = erreurFrancaise(e); return; }
     const chemin = `${user.id}/annonce_${Date.now()}.jpg`;
-    const { error: errUp } = await uploaderFiable("pubs", chemin, imageCompacte, true, (n, s) => { err.textContent = txtEssai("Envoi de l'image…", n, s); });
+    const { error: errUp } = await uploaderFiable("pubs", chemin, imageCompacte, true, (n, s, pct) => { err.textContent = txtEssai("Envoi de l'image…", n, s, pct); });
     if (errUp) { err.textContent = "Image : " + erreurFrancaise(errUp) + " — vérifie ta connexion puis réessaie."; return; }
     image_url = sb.storage.from("pubs").getPublicUrl(chemin).data.publicUrl;
   }
@@ -1189,6 +1283,90 @@ async function chargerListe() {
   });
 }
 
+/* ---------- Diagnostic réseau (v28) ----------
+   Le bouton « Diagnostic » en bas teste chaque étage, un par un, et dit en clair
+   où ça bloque : connexion internet → serveur → stockage → VRAI envoi de 5 Ko.
+   En cas de souci, une capture d'écran de ce test suffit à localiser le problème
+   (à envoyer au développeur via « Contact »). */
+async function lancerDiagnostic() {
+  const ancien = document.getElementById("popDiag");
+  if (ancien) ancien.remove();
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.id = "popDiag";
+  v.innerHTML = `
+    <div class="popup" style="text-align:left">
+      <button class="croix" id="dgFermer">✕</button>
+      <h2 style="margin-bottom:2px">Diagnostic</h2>
+      <p style="font-size:13px;color:var(--texte2);margin-bottom:8px">Test en cours, un instant…</p>
+      <div id="dgListe" style="font-size:14px;line-height:2"></div>
+      <p style="font-size:12px;color:var(--texte2);margin-top:8px">Si une ligne est rouge, envoie sa capture d'écran au développeur via « Contact ».</p>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("dgFermer").onclick = () => v.remove();
+  const liste = document.getElementById("dgListe");
+  const ligne = (ok, texte) => {
+    const p = document.createElement("div");
+    p.style.color = ok ? "var(--ok)" : "var(--erreur)";
+    p.textContent = (ok ? "✓ " : "✗ ") + texte;
+    liste.appendChild(p);
+  };
+  const attente = (texte) => {
+    const p = document.createElement("div");
+    p.style.color = "var(--texte2)";
+    p.textContent = "… " + texte;
+    liste.appendChild(p);
+    return p;
+  };
+  const info = (texte) => {
+    const p = document.createElement("div");
+    p.style.color = "var(--texte2)";
+    p.style.fontSize = "13px";
+    p.textContent = texte;
+    liste.appendChild(p);
+  };
+  ligne(navigator.onLine, navigator.onLine ? "Connexion internet active" : "Pas de connexion internet (mode avion ?)");
+  const a1 = attente("Serveur Supabase…");
+  const t1 = Date.now();
+  try {
+    await fetchFiable(SUPABASE_URL + "/rest/v1/", { headers: { apikey: SUPABASE_KEY } });
+    a1.remove();
+    ligne(true, "Serveur joignable (" + Math.round(Date.now() - t1) + " ms)");
+  } catch (e) {
+    a1.remove();
+    ligne(false, "Serveur injoignable — " + erreurFrancaise(e));
+    return;
+  }
+  const a2 = attente("Stockage des fichiers…");
+  const t2 = Date.now();
+  try {
+    await fetchFiable(SUPABASE_URL + "/storage/v1/object/public/avatars/_test_" + Date.now());
+    a2.remove();
+    ligne(true, "Stockage joignable (" + Math.round(Date.now() - t2) + " ms)");
+  } catch (e) {
+    a2.remove();
+    ligne(false, "Stockage injoignable — " + erreurFrancaise(e));
+    return;
+  }
+  if (!user) {
+    info("Connecte-toi puis relance le Diagnostic pour tester aussi l'envoi réel.");
+    return;
+  }
+  const a3 = attente("Test d'envoi d'un petit fichier…");
+  const cheminTest = user.id + "/test-reseau-" + Date.now() + ".txt";
+  const t3 = Date.now();
+  const { error: errTest } = await uploadAvecDelai("fichiers", cheminTest, new Blob(["test tsiky"], { type: "text/plain" }), false, null);
+  if (errTest) {
+    a3.remove();
+    ligne(false, "ENVOI BLOQUÉ — " + erreurFrancaise(errTest));
+    return;
+  }
+  a3.remove();
+  ligne(true, "Envoi réussi (" + Math.round(Date.now() - t3) + " ms) — tes envois peuvent passer");
+  sb.storage.from("fichiers").remove([cheminTest]); /* nettoyage — sans gravité si raté */
+}
+document.getElementById("lienDiag").onclick = lancerDiagnostic;
+
 /* ---------- Service worker + MISE À JOUR AUTOMATIQUE (v27) ----------
    AVANT : une nouvelle version ne s'affichait qu'après DEUX rechargements
    manuels (cache du service worker) — beaucoup testaient sans le savoir
@@ -1196,8 +1374,9 @@ async function chargerListe() {
    contrôle, l'app se recharge toute seule, une seule fois. */
 let rechargementDejaFait = false;
 let controleAuDepart = false;
+let regSw = null;
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  navigator.serviceWorker.register("sw.js").then((r) => { regSw = r; }).catch(() => {});
   controleAuDepart = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!controleAuDepart) { controleAuDepart = true; return; } /* première installation : rien à recharger */
@@ -1206,6 +1385,16 @@ if ("serviceWorker" in navigator) {
     location.reload();
   });
 }
+/* v28 : vérification de nouvelle version au retour sur l'app + chaque minute —
+   même laissée ouverte des heures, l'app se met à jour toute seule. GitHub Pages
+   garde les fichiers 10 min en cache : update() contourne ce cache. Et JAMAIS
+   de vérification pendant un envoi en cours (un rechargement le casserait). */
+setInterval(() => {
+  if (regSw && !envoiEnCours) regSw.update().catch(() => {});
+}, 60000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && regSw && !envoiEnCours) regSw.update().catch(() => {});
+});
 
 /* ---------- Bannière d'installation ---------- */
 let installationDifferee = null;
