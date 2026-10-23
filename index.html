@@ -1,12 +1,17 @@
 <!DOCTYPE html>
-<!-- Tsiky v26 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v26 ».
-     v26 : FINI LE FIGEAGE sur « essai 1/3 » — un filet global (fetchFiable) met un
-     timeout sur TOUTES les requêtes Supabase (30 s base/auth, 75 s envoi fichiers).
-     AVANT, l'insertion du message APRÈS l'envoi de la photo n'était pas protégée :
-     si le réseau lâchait à ce moment, l'écran restait figé sans jamais prévenir.
-     v26 aussi : secondes en direct pendant l'envoi (« essai 1/3 · 12 s »),
-     messages d'erreur en français partout, connexion protégée aussi.
+<!-- Tsiky v27 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v27 ».
+     v27 : AUDIT COMPLET ligne par ligne. 1) MISE À JOUR AUTOMATIQUE — l'app se
+     recharge toute seule quand une nouvelle version arrive (avant, il fallait
+     recharger DEUX fois : beaucoup testaient sans le savoir l'ancienne version).
+     2) Compression blindée : toBlob sous son propre timeout, refus CLAIR avant
+     l'envoi si la photo originale dépasse 4 Mo et que la compression échoue.
+     3) Anti double-envoi (2 taps rapides = 1 seul envoi). 4) Messages rechargés
+     au retour sur l'app (réceptions manquées en arrière-plan). 5) Erreurs en
+     français sur TOUS les chargements. 6) supabase-js épinglé (plus de surprise
+     CDN). Le moteur est vérifié au démarrage (message clair si CDN indisponible).
+     v26 : filet global fetchFiable (30 s base/auth, 75 s fichiers) + secondes
+     en direct (« essai 1/3 · 12 s »).
      v25 : uploads réparés — rejets rattrapés (.catch), timeout 45 s par essai,
      progression « essai N/3 ».
      Pubs : EMPLACEMENT choisi à la création + rotation quotidienne par espace.
@@ -173,12 +178,18 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v26</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · Tsiky v27</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+/* v27 : si le moteur ne se charge pas (réseau trop faible ou CDN indisponible),
+   message clair au lieu d'un « Chargement… » figé pour toujours */
+if (typeof supabase === "undefined") {
+  document.getElementById("app").innerHTML = "<p class='erreur' style='margin-top:24px'>Impossible de charger Tsiky — vérifie ta connexion puis recharge la page.</p>";
+  throw new Error("supabase-js introuvable");
+}
 const SUPABASE_URL = "https://arkgysluldvprdxeplur.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ObfagnObPZY2qUEGNwKavg_8HWsgMsu";
 /* v26 : filet GLOBAL — toutes les requêtes Supabase (base, auth, stockage) passent
@@ -204,6 +215,7 @@ const app = document.getElementById("app");
 const zonePopup = document.getElementById("zonePopup");
 let user = null, monProfil = null, partenaireActuel = null, canal = null;
 let nonLus = {};
+let envoiEnCours = false; /* v27 : anti double-envoi */
 
 const URL_APP = location.origin + location.pathname.replace(/index\.html$/, "");
 
@@ -258,8 +270,10 @@ function afficherMenuThemes() {
 /* ---------- Contact ---------- */
 document.getElementById("lienContact").onclick = async () => {
   if (!user || !monProfil) return;
-  const { data: admins } = await sb.from("profiles").select("*").eq("role", "admin").limit(1);
+  const { data: admins, error: errAdmin } = await sb.from("profiles").select("*").eq("role", "admin").limit(1);
+  if (errAdmin) { alert("Impossible de joindre l'admin : " + erreurFrancaise(errAdmin)); return; }
   if (admins && admins.length) ouvrirConversation(admins[0]);
+  else alert("Aucun admin n'est joignable pour le moment — réessaie plus tard.");
 };
 
 function majFooter() {
@@ -278,22 +292,37 @@ function normaliserNumero(brut) {
 const emailInvisible = (num) => num.replace("+", "") + "@tsiky.mg";
 const numeroDepuisCompte = () => "+" + (user.email || "").split("@")[0];
 
+/* v27 : compression blindée — toBlob sous son PROPRE timeout (8 s, avant il
+   pouvait ne jamais finir sur les petits téléphones), URL libérée après usage,
+   et refus CLAIR avant l'envoi si la photo originale dépasse 4 Mo et que la
+   compression échoue (avant : on partait quand même vers 45 s × 3 d'attente
+   avec une photo brute de 10-15 Mo — ça ressemblait à un figeage). */
 function compresserImage(fichier, max = 400) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(fichier), 8000);
+  return new Promise((resolve, reject) => {
+    const tropLourde = () => reject(new Error("photo trop lourde pour l'envoi — choisis-en une plus petite"));
+    const echec = () => (fichier.size > 4 * 1024 * 1024 ? tropLourde() : resolve(fichier));
+    const timer = setTimeout(echec, 8000);
+    const urlObjet = URL.createObjectURL(fichier);
     const img = new Image();
     img.onload = () => {
       clearTimeout(timer);
+      URL.revokeObjectURL(urlObjet);
       try {
         const e = Math.min(1, max / Math.max(img.width, img.height));
         const c = document.createElement("canvas");
-        c.width = img.width * e; c.height = img.height * e;
+        c.width = Math.max(1, Math.round(img.width * e));
+        c.height = Math.max(1, Math.round(img.height * e));
         c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-        c.toBlob(b => b ? resolve(b) : resolve(fichier), "image/jpeg", 0.8);
-      } catch (e2) { clearTimeout(timer); resolve(fichier); }
+        const rendu = (b) => {
+          if (b && b.size && b.size < fichier.size) resolve(b);
+          else echec();
+        };
+        const miniTimer = setTimeout(() => rendu(null), 8000);
+        c.toBlob(b => { clearTimeout(miniTimer); rendu(b); }, "image/jpeg", 0.8);
+      } catch (e2) { clearTimeout(timer); echec(); }
     };
-    img.onerror = () => { clearTimeout(timer); resolve(fichier); };
-    img.src = URL.createObjectURL(fichier);
+    img.onerror = () => { clearTimeout(timer); URL.revokeObjectURL(urlObjet); echec(); };
+    img.src = urlObjet;
   });
 }
 
@@ -462,15 +491,26 @@ async function lancerAuth(inscription) {
       : error.message;
     return;
   }
+  /* v27 : si la confirmation par e-mail était activée côté Supabase, l'inscription
+     ne renvoie PAS de session — on l'explique au lieu de planter plus loin */
+  if (inscription && (!resultat.data || !resultat.data.session)) {
+    err.textContent = "Compte créé ! Appuie maintenant sur « J'ai déjà un compte » pour te connecter.";
+    return;
+  }
   const { data } = await sb.auth.getSession();
   user = data.session?.user;
+  if (!user) { err.textContent = "Connexion impossible pour le moment — réessaie."; return; }
   apresConnexion();
 }
 
 /* ---------- Après connexion ---------- */
 async function apresConnexion() {
   const { data: profil, error: errProfil } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (errProfil) { alert("Connexion : " + erreurFrancaise(errProfil)); return; }
+  if (errProfil) {
+    alert("Connexion : " + erreurFrancaise(errProfil));
+    afficherAuth(); majFooter(); /* v27 : jamais d'écran bloqué sur « Chargement… » */
+    return;
+  }
   if (!profil) afficherCreationProfil(); else accueil(profil);
   majFooter();
 }
@@ -503,7 +543,10 @@ function afficherCreationProfil() {
     if (fichier) {
       const chemin = `${user.id}/avatar.jpg`;
       err.textContent = "Compression de la photo…";
-      const { error: errUp } = await uploaderFiable("avatars", chemin, await compresserImage(fichier), true, (n, s) => { err.textContent = txtEssai("Envoi de la photo…", n, s); });
+      let contenuAvatar = null;
+      try { contenuAvatar = await compresserImage(fichier); }
+      catch (e) { err.textContent = erreurFrancaise(e); return; }
+      const { error: errUp } = await uploaderFiable("avatars", chemin, contenuAvatar, true, (n, s) => { err.textContent = txtEssai("Envoi de la photo…", n, s); });
       if (errUp) { err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
       avatar_url = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl;
     }
@@ -542,7 +585,7 @@ function accueil(profil) {
   demarrerTempsReel();
   app.innerHTML = `
     <div class="centre">
-      ${profil.avatar_url ? `<img class="avatar clicPhoto" id="monAvatar" src="${profil.avatar_url}" title="Agrandir">` : `<span class="rond" id="monAvatar">${profil.pseudo[0].toUpperCase()}</span>`}
+      ${profil.avatar_url ? `<img class="avatar clicPhoto" id="monAvatar" src="${profil.avatar_url}" title="Agrandir">` : `<span class="rond" id="monAvatar">${(profil.pseudo || "?")[0].toUpperCase()}</span>`}
       ${profil.avatar_url ? `<p class="astucePhoto">Touche ta photo pour l'agrandir</p>` : ""}
       <br><button class="btnModifPhoto" id="btnChangerPhoto">Changer la photo</button>
       <button class="btnModifPhoto" id="btnChangerPseudo" style="margin-left:4px">Changer le pseudo</button>
@@ -593,7 +636,10 @@ function changerPhoto(profil) {
     if (!f) return;
     err.textContent = "Compression de la photo…";
     const chemin = `${user.id}/avatar.jpg`;
-    const { error: errUp } = await uploaderFiable("avatars", chemin, await compresserImage(f), true, (n, s) => { err.textContent = txtEssai("Envoi de la photo…", n, s); });
+    let contenuAvatar = null;
+    try { contenuAvatar = await compresserImage(f); }
+    catch (e) { err.textContent = erreurFrancaise(e); return; }
+    const { error: errUp } = await uploaderFiable("avatars", chemin, contenuAvatar, true, (n, s) => { err.textContent = txtEssai("Envoi de la photo…", n, s); });
     if (errUp) { err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
     err.textContent = "Enregistrement…";
     const nouvelleUrl = sb.storage.from("avatars").getPublicUrl(chemin).data.publicUrl + "?t=" + Date.now();
@@ -629,7 +675,7 @@ function renommerPseudo(profil) {
     if (nv.length < 2) { err.textContent = "Le pseudo doit faire au moins 2 caractères."; return; }
     err.textContent = "Enregistrement…";
     const { error } = await sb.from("profiles").update({ pseudo: nv }).eq("id", user.id);
-    if (error) { err.textContent = "Impossible : " + error.message; return; }
+    if (error) { err.textContent = "Impossible : " + erreurFrancaise(error); return; }
     v.remove();
     const { data: p } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
     if (p) accueil(p);
@@ -695,7 +741,7 @@ async function afficherDiscussions() {
   retourAcc.onclick = () => accueil(monProfil);
   btnNouveau.onclick = afficherNouveauContact;
   await recalculerNonLus();
-  const { data: msgs } = await sb.from("messages")
+  const { data: msgs, error: errMsgs } = await sb.from("messages")
     .select("sender_id,receiver_id,created_at")
     .or("sender_id.eq." + user.id + ",receiver_id.eq." + user.id)
     .order("created_at", { ascending: false });
@@ -705,11 +751,20 @@ async function afficherDiscussions() {
     if (!vus.has(pid)) { vus.add(pid); ordre.push(pid); }
   });
   const cont = document.getElementById("listeDisc");
+  if (!cont) return;
+  if (errMsgs) {
+    cont.innerHTML = `<p style="color:var(--erreur);font-size:14px;text-align:center;margin:20px 0">Impossible de charger tes discussions — ${erreurFrancaise(errMsgs)}</p>`;
+    return;
+  }
   if (!ordre.length) {
     cont.innerHTML = `<p style="color:var(--texte2);font-size:14px;text-align:center;margin:20px 0">Aucune discussion.<br>Commence par un contact !</p>`;
     return;
   }
-  const { data: profs } = await sb.from("profiles").select("*").in("id", ordre);
+  const { data: profs, error: errProfs } = await sb.from("profiles").select("*").in("id", ordre);
+  if (errProfs) {
+    cont.innerHTML = `<p style="color:var(--erreur);font-size:14px;text-align:center;margin:20px 0">Impossible de charger les profils — ${erreurFrancaise(errProfs)}</p>`;
+    return;
+  }
   cont.innerHTML = "";
   ordre.forEach(pid => {
     const p = (profs || []).find(x => x.id === pid);
@@ -717,7 +772,7 @@ async function afficherDiscussions() {
     const div = document.createElement("div");
     div.className = "contact-item";
     div.innerHTML = `
-      ${p.avatar_url ? `<img src="${p.avatar_url}">` : `<span class="rond-p">${p.pseudo[0].toUpperCase()}</span>`}
+      ${p.avatar_url ? `<img src="${p.avatar_url}">` : `<span class="rond-p">${(p.pseudo || "?")[0].toUpperCase()}</span>`}
       <div class="infos"><div class="nom2">${p.pseudo}</div><div class="tel2">${p.phone || ""}</div></div>
       ${nonLus[p.id] ? `<span class="pastille">${nonLus[p.id]}</span>` : ""}`;
     div.onclick = () => ouvrirConversation(p);
@@ -756,13 +811,13 @@ function afficherNouveauContact() {
 /* ---------- Conversation ---------- */
 async function ouvrirConversation(partenaire) {
   partenaireActuel = partenaire;
-  const { data: bloc } = await sb.from("blocks").select("*")
+  const { data: bloc, error: errBloc } = await sb.from("blocks").select("*")
     .eq("blocker_id", user.id).eq("blocked_id", partenaire.id).maybeSingle();
-  const bloque = !!bloc;
+  const bloque = !errBloc && !!bloc;
   app.innerHTML = `
     <div class="entete">
       <button class="retour" id="retourDisc">←</button>
-      ${partenaire.avatar_url ? `<img class="clicPhoto" id="avatarPair" src="${partenaire.avatar_url}" title="Agrandir">` : `<span class="rond-p">${partenaire.pseudo[0].toUpperCase()}</span>`}
+      ${partenaire.avatar_url ? `<img class="clicPhoto" id="avatarPair" src="${partenaire.avatar_url}" title="Agrandir">` : `<span class="rond-p">${(partenaire.pseudo || "?")[0].toUpperCase()}</span>`}
       <span class="nom">${partenaire.pseudo}</span>
       <button class="btnBloc" id="btnBloc" title="Bloquer">${bloque ? "✅" : "🚫"}</button>
     </div>
@@ -790,19 +845,27 @@ async function ouvrirConversation(partenaire) {
     ouvrirConversation(partenaire);
   };
   if (bloque) return;
-  const { data: msgs } = await sb.from("messages").select("*")
-    .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaire.id + "),and(sender_id.eq." + partenaire.id + ",receiver_id.eq." + user.id + ")")
-    .order("created_at");
-  document.getElementById("zoneMsgs").innerHTML = "";
-  (msgs || []).forEach(ajouterBulle);
-  defilerBas();
-  marquerLu(partenaire.id);
+  /* v27 : les boutons d'envoi sont branchés AVANT le chargement de l'historique —
+     même si l'historique échoue, on peut toujours écrire */
   btnEnvoyer.onclick = envoyerTexte;
   txtMsg.addEventListener("keydown", e => { if (e.key === "Enter") envoyerTexte(); });
   btnPJ.onclick = choisirPieceJointe;
   fichierMsg.onchange = () => envoyerDepuis(fichierMsg);
   fichierCam.onchange = () => envoyerDepuis(fichierCam);
   fichierDoc.onchange = envoyerDocument;
+  const { data: msgs, error: errMsgs } = await sb.from("messages").select("*")
+    .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaire.id + "),and(sender_id.eq." + partenaire.id + ",receiver_id.eq." + user.id + ")")
+    .order("created_at");
+  const zone = document.getElementById("zoneMsgs");
+  if (!zone) return;
+  if (errMsgs) {
+    zone.innerHTML = `<p style="color:var(--erreur);font-size:13px;text-align:center">Impossible de charger l'historique — ${erreurFrancaise(errMsgs)}<br>Mais tu peux quand même écrire ci-dessous.</p>`;
+    return;
+  }
+  zone.innerHTML = "";
+  (msgs || []).forEach(ajouterBulle);
+  defilerBas();
+  marquerLu(partenaire.id);
 }
 
 /* ---------- Choix de la pièce jointe ---------- */
@@ -849,65 +912,96 @@ function defilerBas() {
   if (zone) zone.scrollTop = zone.scrollHeight;
 }
 
+/* v27 : au retour sur l'app, on récupère les messages manqués (le temps réel
+   peut dormir quand le téléphone met Tsiky en arrière-plan) */
+async function rafraichirConversation() {
+  if (!user || !partenaireActuel || envoiEnCours) return;
+  const zone = document.getElementById("zoneMsgs");
+  if (!zone || !document.getElementById("txtMsg")) return;
+  const { data: msgs, error } = await sb.from("messages").select("*")
+    .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaireActuel.id + "),and(sender_id.eq." + partenaireActuel.id + ",receiver_id.eq." + user.id + ")")
+    .order("created_at");
+  if (error || !msgs) return;
+  if (msgs.length !== zone.querySelectorAll(".bulle").length) {
+    zone.innerHTML = "";
+    msgs.forEach(ajouterBulle);
+    defilerBas();
+    marquerLu(partenaireActuel.id);
+  }
+}
+
 async function envoyerTexte() {
   const txt = document.getElementById("txtMsg");
   const err = document.getElementById("errMsg");
   const contenu = txt.value.trim();
-  if (!contenu) return;
-  txt.value = "";
-  const { data, error } = await sb.from("messages").insert({
-    sender_id: user.id, receiver_id: partenaireActuel.id, content: contenu
-  }).select().single();
-  if (error) {
-    const reseau = /fetch|network|timeout|abort/i.test(error.message || "");
-    err.textContent = reseau ? "Message : " + erreurFrancaise(error) : "Impossible d'envoyer — ce contact t'a peut-être bloqué.";
-    return;
-  }
-  ajouterBulle(data);
-  defilerBas();
+  if (!contenu || envoiEnCours || !partenaireActuel) return;
+  envoiEnCours = true;
+  try {
+    txt.value = "";
+    const { data, error } = await sb.from("messages").insert({
+      sender_id: user.id, receiver_id: partenaireActuel.id, content: contenu
+    }).select().single();
+    if (error) {
+      txt.value = contenu; /* v27 : le texte tapé n'est jamais perdu */
+      const m = (error.message || "").toLowerCase();
+      err.textContent = (m.includes("row-level") || m.includes("policy"))
+        ? "Impossible d'envoyer — ce contact t'a peut-être bloqué, ou ta session a expiré (déconnecte-toi puis reconnecte-toi)."
+        : "Message : " + erreurFrancaise(error);
+      return;
+    }
+    ajouterBulle(data);
+    defilerBas();
+  } finally { envoiEnCours = false; }
 }
 
 async function envoyerDepuis(input) {
   const f = input.files[0];
   const err = document.getElementById("errMsg");
-  if (!f) return;
-  if (err) err.textContent = "Compression de la photo…";
-  const chemin = user.id + "/msg_" + Date.now() + ".jpg";
-  const { error: errUp } = await uploaderFiable("fichiers", chemin, await compresserImage(f, 800), false, (n, s) => { if (err) err.textContent = txtEssai("Envoi…", n, s); });
-  if (errUp) { if (err) err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
-  if (err) err.textContent = "Enregistrement du message…";
-  const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
-  const { data, error } = await sb.from("messages").insert({
-    sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "image"
-  }).select().single();
-  if (error) { if (err) err.textContent = "Message : " + erreurFrancaise(error); return; }
-  input.value = "";
-  if (err) err.textContent = "";
-  ajouterBulle(data);
-  defilerBas();
+  if (!f || envoiEnCours || !partenaireActuel) return;
+  envoiEnCours = true;
+  try {
+    if (err) err.textContent = "Compression de la photo…";
+    let contenu = null;
+    try { contenu = await compresserImage(f, 800); }
+    catch (e) { if (err) err.textContent = erreurFrancaise(e); return; }
+    const chemin = user.id + "/msg_" + Date.now() + ".jpg";
+    const { error: errUp } = await uploaderFiable("fichiers", chemin, contenu, false, (n, s) => { if (err) err.textContent = txtEssai("Envoi…", n, s); });
+    if (errUp) { if (err) err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
+    if (err) err.textContent = "Enregistrement du message…";
+    const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
+    const { data, error } = await sb.from("messages").insert({
+      sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "image"
+    }).select().single();
+    if (error) { if (err) err.textContent = "Message : " + erreurFrancaise(error); return; }
+    if (err) err.textContent = "";
+    ajouterBulle(data);
+    defilerBas();
+  } finally { envoiEnCours = false; input.value = ""; }
 }
 
 async function envoyerDocument() {
   const input = document.getElementById("fichierDoc");
   const f = input.files[0];
   const err = document.getElementById("errMsg");
-  if (!f) return;
-  if (f.size > 10 * 1024 * 1024) { if (err) err.textContent = "Fichier trop lourd — 10 Mo maximum."; input.value = ""; return; }
-  if (err) err.textContent = "Envoi du document…";
-  const nomPropre = (f.name || "document.pdf").replace(/[^\w.\-() ]/g, "_");
-  const chemin = user.id + "/doc_" + Date.now() + "_" + nomPropre;
-  const { error: errUp } = await uploaderFiable("fichiers", chemin, f, false, (n, s) => { if (err) err.textContent = txtEssai("Envoi du document…", n, s); });
-  if (errUp) { if (err) err.textContent = "Document : " + erreurFrancaise(errUp); input.value = ""; return; }
-  if (err) err.textContent = "Enregistrement du message…";
-  const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
-  const { data, error } = await sb.from("messages").insert({
-    sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "file", content: f.name || "Document"
-  }).select().single();
-  if (error) { if (err) err.textContent = "Message : " + erreurFrancaise(error); input.value = ""; return; }
-  input.value = "";
-  if (err) err.textContent = "";
-  ajouterBulle(data);
-  defilerBas();
+  if (!f || envoiEnCours || !partenaireActuel) return;
+  envoiEnCours = true;
+  try {
+    if (f.size > 10 * 1024 * 1024) { if (err) err.textContent = "Fichier trop lourd — 10 Mo maximum."; return; }
+    if (err) err.textContent = "Envoi du document…";
+    const nomPropre = (f.name || "document.pdf").replace(/[^\w.\-() ]/g, "_");
+    const chemin = user.id + "/doc_" + Date.now() + "_" + nomPropre;
+    const { error: errUp } = await uploaderFiable("fichiers", chemin, f, false, (n, s) => { if (err) err.textContent = txtEssai("Envoi du document…", n, s); });
+    if (errUp) { if (err) err.textContent = "Document : " + erreurFrancaise(errUp); return; }
+    if (err) err.textContent = "Enregistrement du message…";
+    const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
+    const { data, error } = await sb.from("messages").insert({
+      sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "file", content: f.name || "Document"
+    }).select().single();
+    if (error) { if (err) err.textContent = "Message : " + erreurFrancaise(error); return; }
+    if (err) err.textContent = "";
+    ajouterBulle(data);
+    defilerBas();
+  } finally { envoiEnCours = false; input.value = ""; }
 }
 
 /* ---------- Bandeaux pub (fenêtre inscription + nouvelle discussion) ---------- */
@@ -957,6 +1051,7 @@ async function remplirZonePub(idZone, espace, rang) {
 /* ---------- Rafraîchit les bandeaux quand on revient sur l'app ---------- */
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
+  rafraichirConversation(); /* v27 : on rattrape ce qui a été raté en arrière-plan */
   if (document.getElementById("pubAuth")) remplirZonePub("pubAuth", "inscription", 0);
   if (document.getElementById("pubNouveau")) remplirZonePub("pubNouveau", "nouveau", 1);
 });
@@ -1032,7 +1127,9 @@ async function publierAnnonce() {
   let image_url = null;
   if (aImage.files[0]) {
     err.textContent = "Compression de l'image…";
-    const imageCompacte = await compresserImage(aImage.files[0], 600);
+    let imageCompacte = null;
+    try { imageCompacte = await compresserImage(aImage.files[0], 600); }
+    catch (e) { err.textContent = erreurFrancaise(e); return; }
     const chemin = `${user.id}/annonce_${Date.now()}.jpg`;
     const { error: errUp } = await uploaderFiable("pubs", chemin, imageCompacte, true, (n, s) => { err.textContent = txtEssai("Envoi de l'image…", n, s); });
     if (errUp) { err.textContent = "Image : " + erreurFrancaise(errUp) + " — vérifie ta connexion puis réessaie."; return; }
@@ -1042,7 +1139,7 @@ async function publierAnnonce() {
   const { error } = await sb.from("annonces").insert({
     titre, message, image_url, lien: aLien.value.trim() || null, emplacement: aEmpl.value
   });
-  if (error) { err.textContent = error.message; return; }
+  if (error) { err.textContent = erreurFrancaise(error); return; }
   cachePubs = null; cachePubsLe = 0;
   document.getElementById("ok").textContent = "Annonce publiée";
   err.textContent = "";
@@ -1052,7 +1149,11 @@ async function publierAnnonce() {
 
 async function chargerListe() {
   cachePubs = null; cachePubsLe = 0;
-  const { data } = await sb.from("annonces").select("*").order("created_at", { ascending: false });
+  const { data, error } = await sb.from("annonces").select("*").order("created_at", { ascending: false });
+  if (error) {
+    liste.innerHTML = `<p style="color:var(--erreur);font-size:14px">Impossible de charger les annonces : ${erreurFrancaise(error)}</p>`;
+    return;
+  }
   liste.innerHTML = data?.length ? "" : `<p style="color:var(--texte2);font-size:14px">Aucune annonce pour l'instant.</p>`;
   data?.forEach(a => {
     const div = document.createElement("div");
@@ -1088,8 +1189,23 @@ async function chargerListe() {
   });
 }
 
-/* ---------- Service worker ---------- */
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+/* ---------- Service worker + MISE À JOUR AUTOMATIQUE (v27) ----------
+   AVANT : une nouvelle version ne s'affichait qu'après DEUX rechargements
+   manuels (cache du service worker) — beaucoup testaient sans le savoir
+   l'ancienne version. MAINTENANT : dès qu'une nouvelle version prend le
+   contrôle, l'app se recharge toute seule, une seule fois. */
+let rechargementDejaFait = false;
+let controleAuDepart = false;
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+  controleAuDepart = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!controleAuDepart) { controleAuDepart = true; return; } /* première installation : rien à recharger */
+    if (rechargementDejaFait) return;
+    rechargementDejaFait = true;
+    location.reload();
+  });
+}
 
 /* ---------- Bannière d'installation ---------- */
 let installationDifferee = null;
