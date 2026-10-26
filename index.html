@@ -1,6 +1,13 @@
 <!DOCTYPE html>
-<!-- Tsiky v29 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v29 ».
+<!-- Tsiky v30 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v30 ».
+     v30 : CROISSANCE (objectif : grandir avant la suite de la roadmap).
+     1) Bouton « Inviter un ami 🎁 » : 1 touche → la feuille de partage du
+     téléphone s'ouvre avec le message d'invitation DÉJÀ ÉCRIT + le lien de
+     l'app. Partage système indisponible ? Le message est copié, prêt à
+     coller. 2) Badge « ⭐ Membre fondateur · N° x sur 100 » pour les 100
+     premiers inscrits (rang calculé sur la date de création du profil ; si
+     le calcul échoue, le badge disparaît en silence — jamais de blocage).
      v28 : ENVOIS SUR RÉSEAU DIFFICILE (l'indice du PDF de 2 Mo). 1) PROGRESSION
      RÉELLE pendant l'envoi : « essai 1/3 · 42 % · 0,8/2 Mo » — avant, un simple
      compteur de secondes, impossible de savoir si ça avançait vraiment.
@@ -133,6 +140,9 @@
   .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
   .on { background: rgba(43,138,62,.18); color: var(--ok); }
   .off { background: rgba(201,42,42,.15); color: var(--erreur); }
+  /* v30 : badge des 100 premiers inscrits (or, lisible dans les 2 thèmes) */
+  .badgeFondateur { display: inline-block; margin: 2px 0 6px; padding: 4px 14px; border-radius: 99px; background: rgba(240,180,41,.20); border: 1px solid rgba(240,180,41,.65); color: #8a6a10; font-weight: 700; font-size: 12px; }
+  [data-theme="nuit"] .badgeFondateur { background: rgba(240,180,41,.14); color: #f3d98a; }
   .voile { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 99; }
   .popup { background: var(--carte); color: var(--texte); border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; position: relative; text-align: center; max-height: 88vh; overflow-y: auto; }
   .imgPub { height: 30vh; border-radius: 10px; overflow: hidden; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; background: var(--champ); }
@@ -188,7 +198,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v29</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -677,10 +687,12 @@ function accueil(profil) {
       <button class="btnModifPhoto" id="btnChangerPseudo" style="margin-left:4px">Changer le pseudo</button>
     </div>
     <h1>Salama, ${profil.pseudo} !</h1>
+    <div id="zoneFondateur" style="text-align:center"></div>
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
     <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
-    <button id="btnPartager" class="secondaire">Partager Tsiky</button>
+    <button id="btnInviter">Inviter un ami 🎁 <span style="font-weight:400;font-size:13px">— le message est déjà écrit</span></button>
+    <button id="btnPartager" class="secondaire">Partager Tsiky (QR)</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
   document.getElementById("btnChangerPhoto").onclick = () => changerPhoto(profil);
@@ -688,10 +700,13 @@ function accueil(profil) {
   if (profil.avatar_url) document.getElementById("monAvatar").onclick = () => zoomPhoto(profil.avatar_url);
   btnDisc.onclick = afficherDiscussions;
   btnNouvelle.onclick = afficherNouveauContact;
+  btnInviter.onclick = inviterAmi;
   btnPartager.onclick = afficherPartage;
+  calculerRangFondateur().then(afficherBadgeFondateur);
   if (profil.role === "admin") btnAdmin.onclick = afficherAdmin;
   deco.onclick = async () => {
     if (canal) { await sb.removeChannel(canal); canal = null; }
+    rangFondateur = null; /* v30 : le rang est propre à chaque compte (comptes de test) */
     sb.auth.signOut();
   };
   verifierAnnonce();
@@ -815,6 +830,41 @@ function afficherPartage() {
       window.open("https://wa.me/?text=" + encodeURIComponent(texte), "_blank");
     }
   };
+}
+
+/* ---------- v30 : Inviter un ami (1 touche, sans écran intermédiaire) ---------- */
+const TEXTE_INVITATION = "Salama ! Je t'invite sur Tsiky 🇲🇬 — la messagerie malgache légère : messages, photos, 0 crédit SMS. Installe-la ici : ";
+async function inviterAmi() {
+  const texte = TEXTE_INVITATION + URL_APP;
+  if (navigator.share) {
+    try { await navigator.share({ title: "Tsiky", text: texte, url: URL_APP }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; /* l'utilisateur a annulé — on ne force rien */ }
+  }
+  try {
+    await navigator.clipboard.writeText(texte);
+    prompt("Message d'invitation copié — colle-le à ton ami :", texte);
+  } catch (e) {
+    prompt("Copie ce message d'invitation :", texte);
+  }
+}
+
+/* ---------- v30 : Membre fondateur (les 100 premiers inscrits) ---------- */
+let rangFondateur = null; /* null = pas encore calculé · false = au-delà de 100 · nombre = rang */
+async function calculerRangFondateur() {
+  if (rangFondateur !== null) return rangFondateur;
+  try {
+    const { data, error } = await sb.from("profiles")
+      .select("id, created_at").order("created_at", { ascending: true }).limit(100);
+    if (error || !data) { rangFondateur = false; return rangFondateur; }
+    const i = data.findIndex(p => p.id === user.id);
+    rangFondateur = (i >= 0) ? (i + 1) : false;
+  } catch (e) { rangFondateur = false; }
+  return rangFondateur;
+}
+function afficherBadgeFondateur(rang) {
+  const zone = document.getElementById("zoneFondateur");
+  if (!zone || rang === false || !rang) return;
+  zone.innerHTML = `<span class="badgeFondateur">⭐ Membre fondateur · N° ${rang} sur 100</span>`;
 }
 
 /* ---------- Liste des discussions ---------- */
