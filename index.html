@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<!-- Tsiky v30.1 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.1 ».
+<!-- Tsiky v30.2 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.2 ».
+     v30.2 : BOUTONS HARMONISÉS (retour de Binou, captures 15h32) — « Inviter
+     un ami » tient sur UNE ligne comme les autres ; menus déroulants (« Où
+     la publier ? ») aux mêmes dimensions que les champs.
      v30.1 : FINITIONS DU QUOTIDIEN (choisies avec Binou). 1) « Inviter un ami »
      ouvre une petite fenêtre Tsiky : le message d'invitation est affiché EN
      CLAIR avec un bouton « Copier le message » qui marche PARTOUT — Facebook
@@ -137,7 +140,7 @@
   h2 { color: var(--primaire); font-size: 17px; margin-top: 20px; }
   .sous { text-align: center; color: var(--texte2); font-size: 14px; margin-bottom: 16px; }
   label { display: block; font-size: 13px; color: var(--texte); margin: 12px 0 4px; font-weight: 600; }
-  input, textarea { width: 100%; padding: 12px; border: 1px solid var(--bordure); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--champ); color: var(--texte); }
+  input, textarea, select { width: 100%; padding: 12px; border: 1px solid var(--bordure); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--champ); color: var(--texte); }
   textarea { min-height: 70px; resize: vertical; }
   button { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: var(--primaire); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
   button.secondaire { background: var(--secondaire); color: var(--texte); }
@@ -225,7 +228,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.1</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.2</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -784,7 +787,7 @@ function accueil(profil) {
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
     <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
-    <button id="btnInviter">Inviter un ami 🎁 <span style="font-weight:400;font-size:13px">— le message est prêt à copier</span></button>
+    <button id="btnInviter">Inviter un ami 🎁</button>
     <button id="btnPartager" class="secondaire">Partager Tsiky (QR)</button>
     <button id="btnMdp" class="secondaire">Changer mon mot de passe</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
