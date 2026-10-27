@@ -1,6 +1,22 @@
 <!DOCTYPE html>
-<!-- Tsiky v30 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v30 ».
+<!-- Tsiky v30.1 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.1 ».
+     v30.1 : FINITIONS DU QUOTIDIEN (choisies avec Binou). 1) « Inviter un ami »
+     ouvre une petite fenêtre Tsiky : le message d'invitation est affiché EN
+     CLAIR avec un bouton « Copier le message » qui marche PARTOUT — Facebook
+     jette le texte pré-écrit quand on partage vers une publication (anti-spam
+     de chez eux) ; désormais on copie, on colle soi-même, rien ne se perd.
+     2) Sonnerie « discrète mais entendue » (calibrage exact demandé par Binou)
+     : double pulsation tuc-tuc + son 2 notes à ~2× le volume d'avant, doux.
+     3) Porte de secours MOT DE PASSE : lien « Mot de passe oublié ? » sur
+     l'écran de connexion, bouton « Changer mon mot de passe » sur l'accueil
+     (chacun change le sien), et pour l'admin une fenêtre de réinitialisation
+     (via une petite fonction serveur à déployer UNE fois — le mot de passe
+     d'un autre compte ne se change JAMAIS depuis le navigateur).
+     4) Discussion PLEINE HAUTEUR (la moitié vide d'en bas disparaît), ligne
+     d'écriture agrandie : vraie zone de texte multi-lignes qui grandit toute
+     seule, boutons 📎/➤ remplacés par des icônes SVG propres, heure 11px,
+     bulles plus aérées.
      v30 : CROISSANCE (objectif : grandir avant la suite de la roadmap).
      1) Bouton « Inviter un ami 🎁 » : 1 touche → la feuille de partage du
      téléphone s'ouvre avec le message d'invitation DÉJÀ ÉCRIT + le lien de
@@ -32,7 +48,7 @@
 <html lang="fr" data-theme="jour">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>Tsiky</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -115,7 +131,7 @@
   /* v29 : sur les petits écrans, le contenu part du HAUT et réserve 64px pour le
      pied de page — avant, le bouton « Créer mon compte » pouvait passer SOUS le
      pied de page et le clic n'atteignait pas le bouton (vu au test réel). */
-  @media (max-height: 720px) { body { align-items: flex-start; padding-bottom: 64px; } }
+  @media (max-height: 720px) { body { align-items: flex-start; padding-bottom: 64px; } .zone-msgs { height: calc(100vh - 221px); height: calc(100dvh - 221px); } }
   .card { background: var(--carte); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.10); }
   h1 { color: var(--primaire); text-align: center; margin-bottom: 4px; font-size: 26px; }
   h2 { color: var(--primaire); font-size: 17px; margin-top: 20px; }
@@ -155,17 +171,22 @@
   .entete .nom { flex: 1; font-weight: 700; color: var(--texte); }
   .retour { background: none; font-size: 22px; padding: 0; margin: 0; width: auto; color: var(--primaire); }
   .btnBloc { background: rgba(201, 42, 42, .12); font-size: 24px; padding: 4px 12px; margin: 0; width: auto; border-radius: 99px; color: var(--primaire); }
-  .zone-msgs { height: 50vh; overflow-y: auto; padding: 12px 2px; display: flex; flex-direction: column; gap: 8px; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, var(--ligneCahier) 27px, var(--ligneCahier) 28px); }
-  .bulle { max-width: 80%; padding: 9px 13px; border-radius: 14px; font-size: 15px; word-wrap: break-word; }
+  /* v30.1 : discussion PLEINE HAUTEUR — la zone prend tout l'écran utile
+     (100dvh suit la hauteur réelle : quand le clavier s'ouvre, elle rétrécit
+     et la barre d'envoi reste visible, comme sur WhatsApp). Fini la fenêtre
+     qui s'arrête à la moitié de l'écran. */
+  .zone-msgs { height: calc(100vh - 205px); height: calc(100dvh - 205px); min-height: 220px; overflow-y: auto; padding: 12px 2px; display: flex; flex-direction: column; gap: 8px; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, var(--ligneCahier) 27px, var(--ligneCahier) 28px); }
+  .bulle { max-width: 80%; padding: 11px 14px; border-radius: 14px; font-size: 15px; word-wrap: break-word; }
   .bulle.autre { background: var(--bulleAutre); color: var(--texte); align-self: flex-start; border-bottom-left-radius: 4px; }
   .bulle.moi { background: var(--bulleMoi); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
   .bulle img { max-width: 100%; border-radius: 10px; display: block; margin-bottom: 4px; cursor: zoom-in; }
   .docLien { display: inline-block; max-width: 100%; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.15); color: #fff; font-weight: 600; text-decoration: none; word-break: break-all; font-size: 14px; }
   .bulle.autre .docLien { background: rgba(0,0,0,.06); color: var(--texte); }
-  .heure { font-size: 10px; opacity: .75; text-align: right; margin-top: 3px; }
+  .heure { font-size: 11px; opacity: .75; text-align: right; margin-top: 3px; }
   .barre-envoi { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
-  .barre-envoi input { flex: 1; }
-  .barre-envoi button { width: auto; margin: 0; padding: 12px 16px; }
+  .barre-envoi input, .barre-envoi textarea { flex: 1; }
+  .barre-envoi button { width: auto; margin: 0; padding: 12px 14px; display: flex; align-items: center; justify-content: center; }
+  .barre-envoi svg { display: block; }
   .contact-item { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid var(--bordure); cursor: pointer; }
   .contact-item img, .contact-item .rond-p { width: 46px; height: 46px; }
   .contact-item .infos { flex: 1; }
@@ -192,13 +213,19 @@
   .zoomVoile img { max-width: 94vw; max-height: 84vh; object-fit: contain; border-radius: 10px; }
   .clicPhoto { cursor: zoom-in; }
   .astucePhoto { text-align: center; font-size: 12px; color: var(--texte2); margin-top: 6px; }
+  /* ---- v30.1 : invitation anti-Facebook + porte mot de passe ---- */
+  .msgInvit { background: var(--champ); border: 1px dashed var(--bordure); border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.5; margin-bottom: 2px; text-align: left; user-select: all; -webkit-user-select: all; }
+  .astuceInvit { font-size: 12px; line-height: 1.5; background: var(--banFond); border: 1px solid var(--banBord); color: var(--banTxt); border-radius: 10px; padding: 8px 10px; margin-top: 12px; text-align: left; }
+  .oubliLien { text-align: center; margin-top: 14px; font-size: 14px; }
+  .oubliLien a { color: var(--primaire); font-weight: 700; cursor: pointer; text-decoration: underline; }
+  input::placeholder, textarea::placeholder { color: var(--texte2); opacity: 1; }
 </style>
 </head>
 <body>
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.1</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -487,19 +514,26 @@ async function uploaderFiable(bucket, chemin, contenu, upsert, statut) {
   return { error: derniere }; /* v29 : même forme { error } en cas d'échec */
 }
 
-/* ---------- Sonnerie + vibration ---------- */
+/* ---------- Sonnerie + vibration (v30.1 : « discrète mais entendue ») ----------
+   v30 : un « tic » de 0,15 s à 15 % du volume — on le ratait.
+   v30.1 (calibrage exact demandé par Binou) : double pulsation tuc-tuc courte
+   + le même motif de 2 notes, mais clairement audible (≈ 2× le volume)
+   SANS devenir agressif. Ça passe par le volume MÉDIA du téléphone. */
 function jouerAlerte() {
-  try { if (navigator.vibrate) navigator.vibrate(150); } catch (e) {}
+  try { if (navigator.vibrate) navigator.vibrate([140, 90, 140]); } catch (e) {}
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
     o.type = "sine";
     o.frequency.setValueAtTime(880, ctx.currentTime);
-    o.frequency.setValueAtTime(1175, ctx.currentTime + 0.12);
-    g.gain.setValueAtTime(0.15, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-    o.start(); o.stop(ctx.currentTime + 0.45);
+    o.frequency.setValueAtTime(1175, ctx.currentTime + 0.14);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.32, ctx.currentTime + 0.03);
+    g.gain.setValueAtTime(0.32, ctx.currentTime + 0.20);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+    o.start(); o.stop(ctx.currentTime + 0.55);
   } catch (e) {}
 }
 
@@ -558,10 +592,69 @@ function afficherAuth() {
     <input id="mdp" type="password" placeholder="6 caractères minimum">
     <button id="btnInscrire">Créer mon compte</button>
     <button id="btnConnecter" class="secondaire">J'ai déjà un compte</button>
+    <p class="oubliLien"><a id="lienOubli">Mot de passe oublié ?</a></p>
     <p class="erreur" id="err"></p>`;
   btnInscrire.onclick = () => lancerAuth(true);
   btnConnecter.onclick = () => lancerAuth(false);
+  lienOubli.onclick = fenetreOubli;
   remplirZonePub("pubAuth", "inscription", 0);
+}
+
+/* ---------- v30.1 : porte de secours MOT DE PASSE ----------
+   Les comptes Tsiky n'ont pas d'e-mail réel (adresse technique 261…@tsiky.mg),
+   donc PAS de lien de réinitialisation par e-mail possible. La porte de
+   secours, c'est l'humain — trois étages :
+   1) ici : le membre sait exactement quoi faire ;
+   2) sur l'accueil : chacun change son propre mot de passe (session ouverte) ;
+   3) Espace admin : Binou remet un mot de passe à un membre via une petite
+      fonction serveur (le mot de passe d'un AUTRE compte ne se change jamais
+      depuis le navigateur — règle de sécurité Supabase). */
+function fenetreOubli() {
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup" style="text-align:left">
+      <button class="croix" id="obFermer">✕</button>
+      <h2 style="margin-bottom:6px">Mot de passe oublié ?</h2>
+      <p style="font-size:14px;line-height:1.55">Pas de panique 🙂 Contacte <b>Binou</b>, l'admin de Tsiky : donne-lui ton numéro, il te donne un mot de passe temporaire en 2 minutes.</p>
+      <p style="font-size:13px;color:var(--texte2);line-height:1.55;margin-top:8px">Ensuite, connecte-toi avec ce mot de passe puis change-le depuis l'accueil avec « Changer mon mot de passe ».</p>
+      <button id="obOk" class="secondaire">J'ai compris</button>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("obFermer").onclick = () => v.remove();
+  document.getElementById("obOk").onclick = () => v.remove();
+}
+
+/* v30.1 : chacun change SON mot de passe — 100 % côté client, la session
+   ouverte donne le droit. Utile après un reset de l'admin, ou juste par prudence. */
+function fenetreChangerMdp() {
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup" style="text-align:left">
+      <button class="croix" id="mpFermer">✕</button>
+      <h2 style="margin-bottom:6px">Changer mon mot de passe</h2>
+      <label>Nouveau mot de passe</label>
+      <input id="mp1" type="password" placeholder="6 caractères minimum">
+      <label>Répète-le une fois</label>
+      <input id="mp2" type="password" placeholder="Le même encore">
+      <button id="mpOk">Enregistrer</button>
+      <p class="erreur" id="mpErr"></p>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("mpFermer").onclick = () => v.remove();
+  document.getElementById("mpOk").onclick = async () => {
+    const err = document.getElementById("mpErr");
+    const a = document.getElementById("mp1").value;
+    const b = document.getElementById("mp2").value;
+    if (a.length < 6) { err.textContent = "Mot de passe : 6 caractères minimum."; return; }
+    if (a !== b) { err.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+    err.textContent = "Enregistrement…";
+    const { error } = await sb.auth.updateUser({ password: a });
+    if (error) { err.textContent = erreurFrancaise(error); return; }
+    v.remove();
+    alert("Mot de passe changé ! Retiens-le bien 🙂");
+  };
 }
 
 async function lancerAuth(inscription) {
@@ -691,8 +784,9 @@ function accueil(profil) {
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
     <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
-    <button id="btnInviter">Inviter un ami 🎁 <span style="font-weight:400;font-size:13px">— le message est déjà écrit</span></button>
+    <button id="btnInviter">Inviter un ami 🎁 <span style="font-weight:400;font-size:13px">— le message est prêt à copier</span></button>
     <button id="btnPartager" class="secondaire">Partager Tsiky (QR)</button>
+    <button id="btnMdp" class="secondaire">Changer mon mot de passe</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
     <button id="deco" class="secondaire">Se déconnecter</button>`;
   document.getElementById("btnChangerPhoto").onclick = () => changerPhoto(profil);
@@ -702,6 +796,7 @@ function accueil(profil) {
   btnNouvelle.onclick = afficherNouveauContact;
   btnInviter.onclick = inviterAmi;
   btnPartager.onclick = afficherPartage;
+  btnMdp.onclick = fenetreChangerMdp;
   calculerRangFondateur().then(afficherBadgeFondateur);
   if (profil.role === "admin") btnAdmin.onclick = afficherAdmin;
   deco.onclick = async () => {
@@ -827,25 +922,71 @@ function afficherPartage() {
     if (navigator.share) {
       try { await navigator.share({ title: "Tsiky", text: texte, url: URL_APP }); } catch (e) {}
     } else {
-      window.open("https://wa.me/?text=" + encodeURIComponent(texte), "_blank");
+      const bon = await copierTexte(texte);
+      if (bon) alert("Message + lien copiés — colle-les dans ton message à ton ami.");
+      else prompt("Copie ce message :", texte);
     }
   };
 }
 
-/* ---------- v30 : Inviter un ami (1 touche, sans écran intermédiaire) ---------- */
+/* ---------- v30.1 : Inviter un ami — la fenêtre ANTI-FACEBOOK ----------
+   Constat de terrain (v30) : partagé vers Facebook, le message pré-écrit est
+   JETÉ et Facebook ouvre un composeur de PUBLICATION (leur anti-spam : seul
+   l'URL passe). Tsiky ne peut pas forcer Facebook. Solution : le message est
+   affiché EN CLAIR avec un bouton COPIER qui marche partout — sur Facebook on
+   colle soi-même, par SMS/Messenger tout part déjà écrit. Plus de perte. */
 const TEXTE_INVITATION = "Salama ! Je t'invite sur Tsiky 🇲🇬 — la messagerie malgache légère : messages, photos, 0 crédit SMS. Installe-la ici : ";
-async function inviterAmi() {
-  const texte = TEXTE_INVITATION + URL_APP;
-  if (navigator.share) {
-    try { await navigator.share({ title: "Tsiky", text: texte, url: URL_APP }); return; }
-    catch (e) { if (e && e.name === "AbortError") return; /* l'utilisateur a annulé — on ne force rien */ }
-  }
+async function copierTexte(texte) {
+  try { await navigator.clipboard.writeText(texte); return true; } catch (e) {}
   try {
-    await navigator.clipboard.writeText(texte);
-    prompt("Message d'invitation copié — colle-le à ton ami :", texte);
-  } catch (e) {
-    prompt("Copie ce message d'invitation :", texte);
-  }
+    const z = document.createElement("textarea");
+    z.value = texte;
+    z.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(z);
+    z.focus(); z.select();
+    const bon = document.execCommand("copy");
+    z.remove();
+    return bon;
+  } catch (e2) { return false; }
+}
+function inviterAmi() {
+  const texte = TEXTE_INVITATION + URL_APP;
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup" style="text-align:left">
+      <button class="croix" id="ivFermer">✕</button>
+      <h2 style="margin-bottom:4px">Inviter un ami 🎁</h2>
+      <p style="font-size:13px;color:var(--texte2);margin-bottom:8px">Ton message d'invitation — copie-le et colle-le où tu veux :</p>
+      <div class="msgInvit">${TEXTE_INVITATION}<b style="word-break:break-all">${URL_APP}</b></div>
+      <button id="ivCopier">Copier le message</button>
+      <button id="ivPartager" class="secondaire">Partager… (SMS, Messages…)</button>
+      <p class="astuceInvit">💡 Astuce Facebook : quand tu partages vers Facebook, il garde seulement le lien — colle le message toi-même avant de publier. Par SMS ou Messenger, tout part déjà écrit.</p>
+      <p class="erreur" id="ivErr"></p>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("ivFermer").onclick = () => v.remove();
+  document.getElementById("ivCopier").onclick = async () => {
+    const b = document.getElementById("ivCopier");
+    const bon = await copierTexte(texte);
+    if (bon) {
+      b.textContent = "✓ Copié ! Colle-le où tu veux";
+    } else {
+      document.getElementById("ivErr").textContent = "Copie manuelle : appuie longuement sur le message ci-dessus.";
+    }
+    setTimeout(() => { b.textContent = "Copier le message"; }, 2500);
+  };
+  document.getElementById("ivPartager").onclick = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: "Tsiky", text: texte, url: URL_APP }); }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    } else {
+      const bon = await copierTexte(texte);
+      document.getElementById("ivErr").textContent = bon
+        ? "Message copié — colle-le dans ton message à ton ami."
+        : "Copie le message ci-dessus avec un appui long.";
+    }
+  };
 }
 
 /* ---------- v30 : Membre fondateur (les 100 premiers inscrits) ---------- */
@@ -962,9 +1103,9 @@ async function ouvrirConversation(partenaire) {
     ${bloque
       ? `<p class="erreur">Tu as bloqué ce contact. Débloque-le (bouton vert) pour discuter.</p>`
       : `<div class="barre-envoi">
-          <input id="txtMsg" placeholder="Écris ton message…">
-          <button id="btnPJ" title="Joindre">📎</button>
-          <button id="btnEnvoyer">➤</button>
+          <textarea id="txtMsg" rows="1" placeholder="Écris ton message…"></textarea>
+          <button id="btnPJ" class="secondaire" title="Joindre un fichier" aria-label="Joindre un fichier"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+          <button id="btnEnvoyer" title="Envoyer" aria-label="Envoyer"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
         </div>
         <input type="file" id="fichierMsg" accept="image/*" hidden>
         <input type="file" id="fichierCam" accept="image/*" capture="environment" hidden>
@@ -989,7 +1130,20 @@ async function ouvrirConversation(partenaire) {
   /* v27 : les boutons d'envoi sont branchés AVANT le chargement de l'historique —
      même si l'historique échoue, on peut toujours écrire */
   btnEnvoyer.onclick = envoyerTexte;
-  txtMsg.addEventListener("keydown", e => { if (e.key === "Enter") envoyerTexte(); });
+  /* v30.1 : la ligne d'écriture est une vraie zone de texte multi-lignes —
+     sur ordinateur Enter envoie (Shift+Enter = nouvelle ligne) ; sur téléphone
+     Enter fait une nouvelle ligne et on envoie avec le bouton ➤. La zone
+     grandit toute seule jusqu'à ~5 lignes, puis le texte défile dedans. */
+  txtMsg.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey && window.matchMedia("(min-width: 700px)").matches) {
+      e.preventDefault();
+      envoyerTexte();
+    }
+  });
+  txtMsg.addEventListener("input", () => {
+    txtMsg.style.height = "auto";
+    txtMsg.style.height = Math.min(txtMsg.scrollHeight, 120) + "px";
+  });
   btnPJ.onclick = choisirPieceJointe;
   fichierMsg.onchange = () => envoyerDepuis(fichierMsg);
   fichierCam.onchange = () => envoyerDepuis(fichierCam);
@@ -1081,6 +1235,7 @@ async function envoyerTexte() {
   envoiEnCours = true;
   try {
     txt.value = "";
+    txt.style.height = "auto";
     const { data, error } = await sb.from("messages").insert({
       sender_id: user.id, receiver_id: partenaireActuel.id, content: contenu
     }).select().single();
@@ -1237,6 +1392,7 @@ function afficherAdmin() {
   app.innerHTML = `
     <h1>Admin</h1>
     <p class="sous">Crée et gère tes annonces</p>
+    <button id="btnResetMdp" class="secondaire">Mot de passe oublié d'un membre</button>
     <label>Titre</label>
     <input id="aTitre" placeholder="Ex : Découvre Namako !">
     <label>Message</label>
@@ -1259,8 +1415,59 @@ function afficherAdmin() {
     <div id="liste"><p style="color:var(--texte2);font-size:14px">Chargement…</p></div>
     <button id="retour" class="secondaire">← Retour</button>`;
   btnPublier.onclick = publierAnnonce;
+  btnResetMdp.onclick = fenetreResetMdp;
   retour.onclick = () => accueil(monProfil);
   chargerListe();
+}
+
+/* ---------- v30.1 : réinitialiser le mot de passe d'un membre ----------
+   Le mot de passe d'un AUTRE compte ne se change jamais depuis le navigateur
+   (règle de sécurité Supabase). Tsiky appelle donc une petite fonction
+   stockée DANS la base Supabase : reinit_mot_de_passe. Elle reconnaît
+   l'admin toute seule (profil role = admin) — zéro code secret à retenir,
+   zéro serveur à déployer. Installée UNE fois par Binou : SQL Editor →
+   coller le bloc fourni avec la v30.1 → Run. */
+function fenetreResetMdp() {
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup" style="text-align:left">
+      <button class="croix" id="rmFermer">✕</button>
+      <h2 style="margin-bottom:4px">Mot de passe oublié d'un membre</h2>
+      <p style="font-size:13px;color:var(--texte2);margin-bottom:4px">Il repart avec un mot de passe temporaire — il le changera ensuite depuis l'accueil.</p>
+      <label>Numéro du membre</label>
+      <input id="rmNum" type="tel" placeholder="034 00 000 00">
+      <label>Nouveau mot de passe temporaire</label>
+      <input id="rmMdp" placeholder="6 caractères minimum">
+      <button id="rmProposer" class="secondaire" style="margin-top:8px">Proposer un mot de passe</button>
+      <button id="rmOk">Changer le mot de passe</button>
+      <p class="erreur" id="rmErr"></p>
+      <p class="info" id="rmOk2"></p>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("rmFermer").onclick = () => v.remove();
+  document.getElementById("rmProposer").onclick = () => {
+    document.getElementById("rmMdp").value = "tsiky" + Math.floor(1000 + Math.random() * 9000);
+  };
+  document.getElementById("rmOk").onclick = async () => {
+    const err = document.getElementById("rmErr");
+    const zoneOk = document.getElementById("rmOk2");
+    zoneOk.textContent = ""; err.textContent = "";
+    const num = normaliserNumero(document.getElementById("rmNum").value);
+    const mdp = document.getElementById("rmMdp").value;
+    if (!num) { err.textContent = "Numéro invalide. Exemple : 034 00 000 00"; return; }
+    if (mdp.length < 6) { err.textContent = "Mot de passe : 6 caractères minimum."; return; }
+    err.textContent = "Demande au serveur…";
+    const { data, error } = await sb.rpc("reinit_mot_de_passe", { numero_cible: num, nouveau_mdp: mdp });
+    if (error) {
+      err.textContent = (error.code === "PGRST202" || /could not find the function/i.test(error.message || ""))
+        ? "La commande n'est pas encore installée côté base : colle le bloc SQL dans Supabase (SQL Editor → Run), puis réessaie."
+        : erreurFrancaise(error);
+      return;
+    }
+    err.textContent = "";
+    zoneOk.textContent = "✅ Mot de passe changé pour " + num + " ! Dis-le bien à " + (data || "membre") + ".";
+  };
 }
 
 async function publierAnnonce() {
