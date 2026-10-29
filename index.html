@@ -1,6 +1,15 @@
 <!DOCTYPE html>
-<!-- Tsiky v30.2 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.2 ».
+<!-- Tsiky v30.3 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.3 ».
+     v30.3 : PHOTOS MULTIPLES (demande de Binou) — dans « Joindre un fichier »,
+     « Choisir dans la galerie » permet de sélectionner PLUSIEURS photos d'un
+     coup (5 maximum, pour ménager les réseaux lents et les forfaits). Chaque
+     photo part dans SA bulle, l'une après l'autre, avec un suivi lisible :
+     « Photo 2/3 — envoi… essai 1/3 · 42 % ». Une photo qui échoue n'empêche
+     PAS les suivantes : à la fin, le message dit exactement laquelle
+     réessayer (les autres sont déjà parties). La photo prise avec la caméra
+     reste une seule à la fois, comme un vrai appareil photo. Rien à changer
+     côté Supabase.
      v30.2 : BOUTONS HARMONISÉS (retour de Binou, captures 15h32) — « Inviter
      un ami » tient sur UNE ligne comme les autres ; menus déroulants (« Où
      la publier ? ») aux mêmes dimensions que les champs.
@@ -228,7 +237,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.2</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.3</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -1110,7 +1119,7 @@ async function ouvrirConversation(partenaire) {
           <button id="btnPJ" class="secondaire" title="Joindre un fichier" aria-label="Joindre un fichier"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
           <button id="btnEnvoyer" title="Envoyer" aria-label="Envoyer"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
         </div>
-        <input type="file" id="fichierMsg" accept="image/*" hidden>
+        <input type="file" id="fichierMsg" accept="image/*" multiple hidden>
         <input type="file" id="fichierCam" accept="image/*" capture="environment" hidden>
         <input type="file" id="fichierDoc" accept="application/pdf,.pdf" hidden>
         <p class="erreur" id="errMsg"></p>`}`;
@@ -1177,6 +1186,7 @@ function choisirPieceJointe() {
       <h2 style="margin-bottom:2px">Joindre un fichier</h2>
       <button id="cCam">Prendre une photo</button>
       <button id="cGal" class="secondaire">Choisir dans la galerie</button>
+      <p style="font-size:12px;color:var(--texte2);margin:4px 0 0">Astuce : dans la galerie, tu peux choisir plusieurs photos d'un coup (jusqu'à 5).</p>
       <button id="cDoc" class="secondaire">Document PDF (max 10 Mo)</button>
       <button id="cAnn" class="secondaire">Annuler</button>
     </div>`;
@@ -1255,28 +1265,50 @@ async function envoyerTexte() {
   } finally { envoiEnCours = false; }
 }
 
+/* v30.3 : PHOTOS MULTIPLES — la galerie permet de choisir plusieurs photos
+   d'un coup (5 maximum : au-delà, ça pèse sur les réseaux lents et les
+   forfaits). Chaque photo part dans SA bulle, l'une après l'autre, avec un
+   suivi lisible à chaque étape. Une photo qui échoue n'empêche PAS les
+   suivantes : à la fin, le message dit exactement laquelle réessayer. */
+const MAX_PHOTOS_ENVOI = 5;
+
 async function envoyerDepuis(input) {
-  const f = input.files[0];
   const err = document.getElementById("errMsg");
-  if (!f || envoiEnCours || !partenaireActuel) return;
+  if (!input.files || !input.files.length || envoiEnCours || !partenaireActuel) return;
+  const liste = Array.from(input.files).slice(0, MAX_PHOTOS_ENVOI);
+  const ignorees = input.files.length - liste.length;
   envoiEnCours = true;
+  const ratees = [];
   try {
-    if (err) err.textContent = "Compression de la photo…";
-    let contenu = null;
-    try { contenu = await compresserImage(f, 800); }
-    catch (e) { if (err) err.textContent = erreurFrancaise(e); return; }
-    const chemin = user.id + "/msg_" + Date.now() + ".jpg";
-    const { error: errUp } = await uploaderFiable("fichiers", chemin, contenu, false, (n, s, pct) => { if (err) err.textContent = txtEssai("Envoi…", n, s, pct); });
-    if (errUp) { if (err) err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
-    if (err) err.textContent = "Enregistrement du message…";
-    const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
-    const { data, error } = await sb.from("messages").insert({
-      sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "image"
-    }).select().single();
-    if (error) { if (err) err.textContent = "Message : " + erreurFrancaise(error); return; }
-    if (err) err.textContent = "";
-    ajouterBulle(data);
-    defilerBas();
+    for (let i = 0; i < liste.length; i++) {
+      const avant = "Photo " + (i + 1) + "/" + liste.length;
+      try {
+        if (err) err.textContent = avant + " — préparation…";
+        let contenu = null;
+        try { contenu = await compresserImage(liste[i], 800); }
+        catch (e) { throw new Error(erreurFrancaise(e)); }
+        const chemin = user.id + "/msg_" + Date.now() + "_" + i + ".jpg";
+        const { error: errUp } = await uploaderFiable("fichiers", chemin, contenu, false, (n, s, pct) => { if (err) err.textContent = avant + " — " + txtEssai("envoi", n, s, pct); });
+        if (errUp) throw new Error(erreurFrancaise(errUp));
+        if (err) err.textContent = avant + " — enregistrement…";
+        const url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
+        const { data, error } = await sb.from("messages").insert({
+          sender_id: user.id, receiver_id: partenaireActuel.id, media_url: url, media_type: "image"
+        }).select().single();
+        if (error) throw new Error(erreurFrancaise(error));
+        ajouterBulle(data);
+        defilerBas();
+      } catch (e) {
+        ratees.push("photo " + (i + 1) + " : " + ((e && e.message) || "erreur inconnue"));
+      }
+    }
+    if (err) {
+      if (ratees.length === 0) err.textContent = "";
+      else err.textContent = "Pas " + (ratees.length > 1 ? "envoyées — " : "envoyée — ") + ratees.join(" · ") + ". Les autres sont bien parties : réessaie avec celle" + (ratees.length > 1 ? "s" : "") + "-là.";
+    }
+    if (ignorees > 0 && err) {
+      err.textContent = "Maximum " + MAX_PHOTOS_ENVOI + " photos par envoi (" + ignorees + " ignorée" + (ignorees > 1 ? "s" : "") + "). " + err.textContent;
+    }
   } finally { envoiEnCours = false; input.value = ""; }
 }
 
