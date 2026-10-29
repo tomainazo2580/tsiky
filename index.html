@@ -1,6 +1,19 @@
 <!DOCTYPE html>
-<!-- Tsiky v30.3 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.3 ».
+<!-- Tsiky v30.4 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.4 ».
+     v30.4 : NOTIFICATIONS APP FERMÉE + ACCUSÉ DE LECTURE (demande de Binou,
+     « comme Facebook et WhatsApp »). 1) NOTIFICATIONS : bouton « 🔔 Notifi-
+     cations » sur l'accueil — s'il est activé, un message reçu quand l'app
+     est FERMÉE fait vibrer le téléphone et affiche « Tsiky — Pseudo ». Pas
+     de serveur : c'est l'EXPÉDITEUR qui sonne le destinataire (chiffrement
+     Web Push standard + identité VAPID de Tsiky, clés P-256 en bas de page).
+     Si l'app est déjà ouverte à l'écran, aucune notification (comme
+     WhatsApp). Nécessite le bloc SQL v30.4 dans Supabase (table
+     push_subscriptions) — sans lui, Tsiky marche exactement comme avant.
+     2) LU : petit « ✓ » (envoyé) / « ✓✓ » (lu) sous mes messages ; quand
+     l'ami ouvre la discussion, le ✓ devient ✓✓ — en direct via le canal
+     temps réel déjà présent. Nécessite le même bloc SQL (colonne lu).
+     SANS le bloc SQL : tout le reste fonctionne exactement comme v30.3.
      v30.3 : PHOTOS MULTIPLES (demande de Binou) — dans « Joindre un fichier »,
      « Choisir dans la galerie » permet de sélectionner PLUSIEURS photos d'un
      coup (5 maximum, pour ménager les réseaux lents et les forfaits). Chaque
@@ -195,6 +208,9 @@
   .docLien { display: inline-block; max-width: 100%; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.15); color: #fff; font-weight: 600; text-decoration: none; word-break: break-all; font-size: 14px; }
   .bulle.autre .docLien { background: rgba(0,0,0,.06); color: var(--texte); }
   .heure { font-size: 11px; opacity: .75; text-align: right; margin-top: 3px; }
+  /* v30.4 : accusé de lecture ✓ envoyé / ✓✓ lu (sur mes bulles uniquement) */
+  .etatLu { font-size: 10px; letter-spacing: -1px; margin-left: 2px; }
+  .etatLu.lu { opacity: 1; color: #bfe3ff; }
   .barre-envoi { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
   .barre-envoi input, .barre-envoi textarea { flex: 1; }
   .barre-envoi button { width: auto; margin: 0; padding: 12px 14px; display: flex; align-items: center; justify-content: center; }
@@ -237,7 +253,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.3</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.4</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -578,6 +594,12 @@ function marquerLu(partenaireId) {
   nonLus[partenaireId] = 0;
   localStorage.setItem("tsiky_vu_" + partenaireId, new Date().toISOString());
   mettreAJourBadges();
+  /* v30.4 : accusé de lecture — noté en base, en silence. Si le bloc SQL
+     n'est pas encore collé, l'update échoue sans bruit : Tsiky marche
+     exactement comme avant, il n'y a juste pas encore de « ✓✓ ». */
+  sb.from("messages").update({ lu: true })
+    .eq("receiver_id", user.id).eq("sender_id", partenaireId).neq("lu", true)
+    .then(() => {}, () => {});
 }
 
 /* ---------- Démarrage ---------- */
@@ -757,6 +779,154 @@ function afficherCreationProfil() {
   };
 }
 
+/* ---------- v30.4 : NOTIFICATIONS APP FERMÉE (Web Push) ----------
+   Sans serveur : quand j'envoie un message, MON téléphone signe et chiffre
+   l'alerte destinée à l'ami (standard Web Push RFC 8291 + identité VAPID).
+   Si l'app de l'ami est fermée, son service worker affiche la notification
+   « Tsiky — Pseudo ». Si elle est déjà ouverte à l'écran, rien (comme
+   WhatsApp). Tout est silencieux : le moindre raté ne gêne JAMAIS l'envoi. */
+const VAPID_PUB = "BKURY3ZUblYHeFFrfIYCrorebtspxkxlcHaFtst1jKSjAq_5ysbjha-Dud0seMUMbDnN4b4CiJF1EvxD_a70lNc";
+const VAPID_PRIV_JWK = { crv: "P-256", d: "6HO09GfwnoG8P-1gNmJFgPxs0z5WGyGAZyzBenW8I3E", x: "pRFjdlRuVgd4UWt8hgKuit5u2ynGTGVwdoW2y3WMpKM", y: "Aq_5ysbjha-Dud0seMUMbDnN4b4CiJF1EvxD_a70lNc", kty: "EC" };
+
+function b64urlVersOctets(s) {
+  const b = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(b, c => c.charCodeAt(0));
+}
+function octetsVersB64url(o) {
+  return btoa(String.fromCharCode(...new Uint8Array(o))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/* Chiffre le corps du message pour CET abonné (aes128gcm, RFC 8291) */
+async function pushChiffrer(plain, p256dh, auth) {
+  const cleRecu = await crypto.subtle.importKey("raw", b64urlVersOctets(p256dh), { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const eph = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const partage = await crypto.subtle.deriveBits({ name: "ECDH", public: cleRecu }, eph.privateKey, 256);
+  const pubRecu = b64urlVersOctets(p256dh);
+  const pubEph = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
+  const ikm = await crypto.subtle.importKey("raw", partage, "HKDF", false, ["deriveBits"]);
+  const infoIkm = new Uint8Array(13 + 1 + 65 + 65);
+  infoIkm.set(new TextEncoder().encode("WebPush: info"), 0);
+  infoIkm[13] = 0; infoIkm.set(pubRecu, 14); infoIkm.set(pubEph, 79);
+  const prkBits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: b64urlVersOctets(auth), info: infoIkm }, ikm, 256);
+  const sel = crypto.getRandomValues(new Uint8Array(16));
+  const prk = await crypto.subtle.importKey("raw", prkBits, "HKDF", false, ["deriveBits"]);
+  const cek = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: sel, info: new Uint8Array([67, 111, 110, 116, 101, 110, 116, 45, 69, 110, 99, 111, 100, 105, 110, 103, 58, 32, 97, 101, 115, 49, 50, 56, 103, 99, 109, 0]) }, prk, 128));
+  const nonce = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: sel, info: new Uint8Array([67, 111, 110, 116, 101, 110, 116, 45, 69, 110, 99, 111, 100, 105, 110, 103, 58, 32, 110, 111, 110, 99, 101, 0]) }, prk, 96));
+  const clair = new Uint8Array(plain.length + 1);
+  clair.set(plain, 0); clair[plain.length] = 2;
+  const cleAes = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const chiffre = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, tagLength: 128 }, cleAes, clair));
+  const corps = new Uint8Array(16 + 4 + 1 + 65 + chiffre.length);
+  corps.set(sel, 0);
+  corps[16] = 0; corps[17] = 0; corps[18] = 16; corps[19] = 0;
+  corps[20] = 65;
+  corps.set(pubEph, 21);
+  corps.set(chiffre, 86);
+  return corps;
+}
+
+/* Signe l'identité VAPID (ES256) pour le serveur de push de l'ami */
+async function pushJWT(endpoint) {
+  const aud = new URL(endpoint).origin;
+  const cle = await crypto.subtle.importKey("jwk", VAPID_PRIV_JWK, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const tete = octetsVersB64url(new TextEncoder().encode(JSON.stringify({ typ: "JWT", alg: "ES256" })));
+  const corpsJwt = octetsVersB64url(new TextEncoder().encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 43200, sub: "mailto:admin@tsiky.mg" })));
+  const sigBrute = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, cle, new TextEncoder().encode(tete + "." + corpsJwt)));
+  const sig = new Uint8Array(64);
+  sig.set(sigBrute.slice(0, 32), 0);
+  sig.set(sigBrute.slice(32, 64), 32);
+  return tete + "." + corpsJwt + "." + octetsVersB64url(sig);
+}
+
+/* Prévient tous les téléphones d'un membre — jamais d'erreur visible */
+async function envoyerPush(destinataireId, corps) {
+  try {
+    if (!user || destinataireId === user.id) return;
+    const { data: subs, error } = await sb.from("push_subscriptions").select("*").eq("user_id", destinataireId);
+    if (error || !subs || !subs.length) return;
+    await Promise.all(subs.map(async (s) => {
+      try {
+        const jwt = await pushJWT(s.endpoint);
+        const charge = await pushChiffrer(new TextEncoder().encode(JSON.stringify(corps)), s.p256dh, s.auth);
+        const r = await fetchFiableURL(s.endpoint, jwt, charge);
+        if (r === 404 || r === 410) sb.from("push_subscriptions").delete().eq("id", s.id).then(() => {}, () => {});
+      } catch (e) { /* silence : une notif ratée ne doit rien casser */ }
+    }));
+  } catch (e) { /* silence */ }
+}
+
+async function fetchFiableURL(url, jwt, corps) {
+  const ctrl = new AbortController();
+  const fin = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(url, { method: "POST", headers: { TTL: "86400", Urgency: "high", "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream", Authorization: "vapid t=" + jwt + ", k=" + VAPID_PUB }, body: corps, signal: ctrl.signal });
+    return r.status;
+  } finally { clearTimeout(fin); }
+}
+
+/* Le bouton « 🔔 Notifications » de l'accueil */
+async function majEtatNotif() {
+  const b = document.getElementById("btnNotif");
+  if (!b) return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    b.textContent = "🔔 Notifications (non disponible ici)";
+    return;
+  }
+  if (Notification.permission === "granted") {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sous = reg && await reg.pushManager.getSubscription();
+      b.textContent = sous ? "🔔 Notifications activées ✓" : "🔔 Notifications";
+    } catch (e) { b.textContent = "🔔 Notifications"; }
+  } else b.textContent = "🔔 Notifications";
+}
+
+function fenetreNotifications() {
+  const v = document.createElement("div");
+  v.className = "voile";
+  v.innerHTML = `
+    <div class="popup" style="text-align:left">
+      <button class="croix" id="ntFermer">✕</button>
+      <h2 style="margin-bottom:6px">🔔 Notifications</h2>
+      <p style="font-size:14px;line-height:1.55">Active-les pour être prévenu comme sur WhatsApp : un message reçu <b>app fermée</b> fait vibrer ton téléphone.</p>
+      <button id="ntOk">Activer les notifications</button>
+      <p class="erreur" id="ntErr" style="margin-top:8px"></p>
+    </div>`;
+  document.body.appendChild(v);
+  document.getElementById("ntFermer").onclick = () => v.remove();
+  document.getElementById("ntOk").onclick = async () => {
+    const err = document.getElementById("ntErr");
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      err.textContent = "Ton navigateur ne gère pas les notifications — sur iPhone, installe d'abord Tsiky sur l'écran d'accueil (bouton Partager → « Sur l'écran d'accueil »), puis reviens ici.";
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") { err.textContent = "Notifications refusées. Tu peux les réactiver plus tard en touchant encore le bouton 🔔."; return; }
+      err.textContent = "Enregistrement de ton téléphone…";
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) { err.textContent = "Tsiky n'a pas fini de charger — attends quelques secondes et réessaie."; return; }
+      let sous = await reg.pushManager.getSubscription();
+      if (!sous) sous = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlVersOctets(VAPID_PUB) });
+      const j = sous.toJSON();
+      const { error } = await sb.from("push_subscriptions").upsert({
+        user_id: user.id, endpoint: sous.endpoint,
+        p256dh: j.keys.p256dh, auth: j.keys.auth
+      }, { onConflict: "endpoint" });
+      if (error) {
+        err.textContent = (error.message || "").includes("push_subscriptions")
+          ? "Presque fini ! L'admin doit d'abord coller le bloc SQL v30.4 dans Supabase (SQL Editor → Run), puis tu réessaies."
+          : "Enregistrement : " + erreurFrancaise(error);
+        return;
+      }
+      v.remove();
+      majEtatNotif();
+    } catch (e) {
+      err.textContent = "Impossible d'activer : " + ((e && e.message) || "erreur inconnue") + " — réessaie, ou passe par le bouton Diagnostic.";
+    }
+  };
+}
+
 /* ---------- Temps réel ---------- */
 function demarrerTempsReel() {
   if (canal) return;
@@ -776,6 +946,10 @@ function demarrerTempsReel() {
           if (document.getElementById("listeDisc")) afficherDiscussions();
         }
       })
+    /* v30.4 : quand un ami lit mes messages, mes ✓ deviennent ✓✓ en direct */
+    .on("postgres_changes",
+      { event: "UPDATE", schema: "public", table: "messages", filter: "sender_id=eq." + user.id },
+      () => rafraichirConversation())
     .subscribe();
 }
 
@@ -797,6 +971,7 @@ function accueil(profil) {
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
     <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
     <button id="btnInviter">Inviter un ami 🎁</button>
+    <button id="btnNotif" class="secondaire">🔔 Notifications</button>
     <button id="btnPartager" class="secondaire">Partager Tsiky (QR)</button>
     <button id="btnMdp" class="secondaire">Changer mon mot de passe</button>
     ${profil.role === "admin" ? `<button id="btnAdmin" class="secondaire">Espace admin</button>` : ""}
@@ -807,6 +982,8 @@ function accueil(profil) {
   btnDisc.onclick = afficherDiscussions;
   btnNouvelle.onclick = afficherNouveauContact;
   btnInviter.onclick = inviterAmi;
+  document.getElementById("btnNotif").onclick = fenetreNotifications; /* v30.4 */
+  majEtatNotif(); /* v30.4 : affiche d'emblée « activées ✓ » si c'est déjà fait */
   btnPartager.onclick = afficherPartage;
   btnMdp.onclick = fenetreChangerMdp;
   calculerRangFondateur().then(afficherBadgeFondateur);
@@ -1210,7 +1387,9 @@ function ajouterBulle(m) {
     c += `<a class="docLien" href="${m.media_url}" target="_blank" rel="noopener">${nom}</a>`;
   }
   if (m.content && m.media_type !== "file") c += `<div>${m.content.replace(/</g, "&lt;")}</div>`;
-  c += `<div class="heure">${h}</div>`;
+  /* v30.4 : ✓ = envoyé, ✓✓ = lu (sur MES bulles uniquement) */
+  if (m.sender_id === user.id) c += `<div class="heure">${h}<span class="etatLu${m.lu ? " lu" : ""}">${m.lu ? "✓✓" : "✓"}</span></div>`;
+  else c += `<div class="heure">${h}</div>`;
   div.innerHTML = c;
   const im = div.querySelector("img");
   if (im && m.media_url) { im.className = "clicPhoto"; im.onclick = () => zoomPhoto(m.media_url); }
@@ -1232,7 +1411,11 @@ async function rafraichirConversation() {
     .or("and(sender_id.eq." + user.id + ",receiver_id.eq." + partenaireActuel.id + "),and(sender_id.eq." + partenaireActuel.id + ",receiver_id.eq." + user.id + ")")
     .order("created_at", { ascending: false }).limit(500);
   if (error || !msgs) return;
-  if (msgs.length !== zone.querySelectorAll(".bulle").length) {
+  /* v30.4 : on redessine aussi quand un « lu » a changé (le nombre de
+     bulles, lui, n'a pas bougé — d'où la signature longue) */
+  const sig = msgs.length + ":" + msgs.filter(m => m.sender_id === user.id && m.lu).length;
+  if (sig !== zone.dataset.sig) {
+    zone.dataset.sig = sig;
     zone.innerHTML = "";
     msgs.reverse().forEach(ajouterBulle);
     defilerBas();
@@ -1262,6 +1445,7 @@ async function envoyerTexte() {
     }
     ajouterBulle(data);
     defilerBas();
+    envoyerPush(partenaireActuel.id, { t: "msg", p: (monProfil && monProfil.pseudo) || "Un membre", b: contenu }); /* v30.4 */
   } finally { envoiEnCours = false; }
 }
 
@@ -1298,6 +1482,7 @@ async function envoyerDepuis(input) {
         if (error) throw new Error(erreurFrancaise(error));
         ajouterBulle(data);
         defilerBas();
+        envoyerPush(partenaireActuel.id, { t: "msg", p: (monProfil && monProfil.pseudo) || "Un membre", b: "📷 Photo" }); /* v30.4 */
       } catch (e) {
         ratees.push("photo " + (i + 1) + " : " + ((e && e.message) || "erreur inconnue"));
       }
@@ -1335,6 +1520,7 @@ async function envoyerDocument() {
     if (err) err.textContent = "";
     ajouterBulle(data);
     defilerBas();
+    envoyerPush(partenaireActuel.id, { t: "msg", p: (monProfil && monProfil.pseudo) || "Un membre", b: "📄 " + (f.name || "Document") }); /* v30.4 */
   } finally { envoiEnCours = false; input.value = ""; }
 }
 
