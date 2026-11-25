@@ -1,6 +1,15 @@
 <!DOCTYPE html>
-<!-- Tsiky v31 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v31 ».
+<!-- Tsiky v31.1 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v31.1 ».
+     v31.1 : LE BOUTON ANNONCES ATTIRE L'ŒIL (retour de Binou — « changer la
+     couleur du bouton parce que c'est nouveau »). Couleur MARCHÉ : orange vif
+     (la couleur des étals et d'Orange Money), différente de tous les autres
+     boutons bleus, avec une petite étiquette « NOUVEAU » blanche qui pulse
+     doucement. L'étiquette s'efface TOUTE SEULE après 21 jours sur chaque
+     téléphone (rien à retoucher dans le code ensuite). Bonus : la photo d'une
+     annonce est compressée à 800 px (comme les photos du chat) au lieu de
+     400 px — les articles se voient bien. Aucun changement côté Supabase : le
+     bloc SQL v31 déjà collé reste exactement le bon.
      v31 : ANNONCES — le prélude du Marché (idée de Binou). Nouveau bouton
      « 🛒 Annonces » sur l'accueil : chaque membre peut publier une petite
      annonce GRATUITE (titre, description, prix facultatif en Ariary, photo
@@ -283,14 +292,26 @@
   .annVendeur small { display: block; font-size: 12px; color: var(--texte2); margin-top: 2px; }
   .annTiming { text-align: center; font-size: 12px; color: var(--texte2); margin-top: 10px; }
   .annMsgPre { font-size: 12px; color: var(--texte2); text-align: center; margin-top: 8px; background: var(--champ); border-radius: 8px; padding: 7px 9px; }
-  input::placeholder, textarea::placeholder { color: var(--texte2); opacity: 1; }
+  /* ---- v31.1 : le bouton Annonces en couleur MARCHÉ (retour de Binou :
+     « c'est nouveau, il doit attirer le regard ») — orange vif, différent de
+     tous les autres boutons, lisible dans les 4 thèmes. ---- */
+  #btnAnnonces {
+    background: linear-gradient(135deg, #f59f00, #e8590c);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.18);
+    box-shadow: 0 3px 12px rgba(232,89,12,.38);
+    padding: 14px;
+    font-weight: 800;
+  }
+  .chipNouveau { display: inline-block; margin-left: 7px; padding: 2px 8px; border-radius: 99px; background: #fff; color: #d9480f; font-size: 10px; font-weight: 800; letter-spacing: .6px; vertical-align: middle; animation: pulseNouveau 1.8s ease-in-out infinite; }
+  @keyframes pulseNouveau { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.09); opacity: .85; } }
 </style>
 </head>
 <body>
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v31</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v31.1</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -1006,7 +1027,7 @@ function accueil(profil) {
     <div id="zoneFondateur" style="text-align:center"></div>
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
-    <button id="btnAnnonces">🛒 Annonces</button>
+    <button id="btnAnnonces">🛒 Annonces<span class="chipNouveau" id="chipNouveauAnn">NOUVEAU</span></button>
     <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
     <button id="btnInviter">Inviter un ami 🎁</button>
     <button id="btnNotif" class="secondaire">🔔 Notifications</button>
@@ -1019,6 +1040,17 @@ function accueil(profil) {
   if (profil.avatar_url) document.getElementById("monAvatar").onclick = () => zoomPhoto(profil.avatar_url);
   btnDisc.onclick = afficherDiscussions;
   document.getElementById("btnAnnonces").onclick = afficherAnnonces; /* v31 */
+  /* v31.1 : l'étiquette « NOUVEAU » s'efface toute seule après 21 jours sur
+     chaque téléphone — l'effet « c'est nouveau » ne dure pas des mois, et
+     Binou n'a rien à retoucher dans le code pour ça. */
+  try {
+    const cleNouveau = "tsiky_annonce_nouveau";
+    if (!localStorage.getItem(cleNouveau)) localStorage.setItem(cleNouveau, String(Date.now()));
+    else if (Date.now() - Number(localStorage.getItem(cleNouveau)) > 21 * 24 * 3600 * 1000) {
+      const chipN = document.getElementById("chipNouveauAnn");
+      if (chipN) chipN.remove();
+    }
+  } catch (_) {}
   btnNouvelle.onclick = afficherNouveauContact;
   btnInviter.onclick = inviterAmi;
   document.getElementById("btnNotif").onclick = fenetreNotifications; /* v30.4 */
@@ -1227,7 +1259,7 @@ function ecranPublierAnnonce() {
     if (fichierPhoto) {
       err.textContent = "Compression de la photo…";
       let contenu = null;
-      try { contenu = await compresserImage(fichierPhoto); }
+      try { contenu = await compresserImage(fichierPhoto, 800); } /* v31.1 : 800 px comme le chat — la photo d'un article doit se voir */
       catch (e) { err.textContent = erreurFrancaise(e); return; }
       const chemin = user.id + "/annonce_" + Date.now() + ".jpg";
       err.textContent = "Envoi de la photo…";

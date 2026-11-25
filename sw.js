@@ -1,4 +1,7 @@
-const CACHE = "tsiky-v31";
+/* v31.1 : bouton Annonces couleur marché (orange) + étiquette NOUVEAU (retour
+   de Binou). Le nom du cache change à chaque version : c'est ce qui pousse la
+   mise à jour sur les téléphones. */
+const CACHE = "tsiky-v31-1";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
