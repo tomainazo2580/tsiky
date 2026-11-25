@@ -1,6 +1,21 @@
 <!DOCTYPE html>
-<!-- Tsiky v30.4 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
-     Vérification après publication : le bas de l'app doit afficher « Tsiky v30.4 ».
+<!-- Tsiky v31 — REMPLACE CE FICHIER EN ENTIER sur GitHub (branche main).
+     Vérification après publication : le bas de l'app doit afficher « Tsiky v31 ».
+     v31 : ANNONCES — le prélude du Marché (idée de Binou). Nouveau bouton
+     « 🛒 Annonces » sur l'accueil : chaque membre peut publier une petite
+     annonce GRATUITE (titre, description, prix facultatif en Ariary, photo
+     facultative), visible 3 JOURS, renouvelable en 1 clic (elle repart pour
+     3 jours et remonte en haut de la liste), 3 annonces actives maximum par
+     membre — la limite et les dates sont appliquées CÔTÉ SERVEUR (bloc SQL
+     v31 : table « annonces_tsiky » + fonctions publier_annonce_tsiky /
+     renouveler_annonce_tsiky). Sur chaque annonce d'un autre : bouton
+     « 💬 Discuter avec le vendeur » qui ouvre la conversation Tsiky avec le
+     message déjà écrit — la boucle annonce → chat → rendez-vous au comptoir.
+     ATTENTION au nom : « annonces_tsiky » est la table des annonces membres ;
+     « annonces » (sans _tsiky) est la table des BANDEAUX PUBLICITAIRES de
+     l'app — on ne la touche jamais. SANS le bloc SQL v31 : tout le reste
+     marche exactement comme v30.4 ; le bouton Annonces affiche une erreur
+     claire jusqu'à ce que le SQL soit collé.
      v30.4 : NOTIFICATIONS APP FERMÉE + ACCUSÉ DE LECTURE (demande de Binou,
      « comme Facebook et WhatsApp »). 1) NOTIFICATIONS : bouton « 🔔 Notifi-
      cations » sur l'accueil — s'il est activé, un message reçu quand l'app
@@ -246,6 +261,28 @@
   .astuceInvit { font-size: 12px; line-height: 1.5; background: var(--banFond); border: 1px solid var(--banBord); color: var(--banTxt); border-radius: 10px; padding: 8px 10px; margin-top: 12px; text-align: left; }
   .oubliLien { text-align: center; margin-top: 14px; font-size: 14px; }
   .oubliLien a { color: var(--primaire); font-weight: 700; cursor: pointer; text-decoration: underline; }
+  /* ---- v31 : ANNONCES (prélude du Marché) ---- */
+  .annRegle { font-size: 12px; line-height: 1.5; background: var(--banFond); border: 1px solid var(--banBord); color: var(--banTxt); border-radius: 10px; padding: 8px 10px; margin: 12px 0 0; text-align: center; }
+  .annCarte { display: flex; align-items: center; gap: 12px; background: var(--champ); border: 1px solid var(--bordure); border-radius: 12px; padding: 10px 12px; margin-top: 10px; cursor: pointer; }
+  .annCarte .ph { width: 58px; height: 58px; border-radius: 10px; background: var(--secondaire); display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; overflow: hidden; }
+  .annCarte .ph img { width: 100%; height: 100%; object-fit: cover; }
+  .annCarte .inf { flex: 1; min-width: 0; }
+  .annCarte .titre { font-weight: 700; font-size: 15px; color: var(--texte); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .annCarte .prix { font-size: 14px; font-weight: 800; color: var(--primaire); margin-top: 2px; }
+  .annCarte .qui { font-size: 12px; color: var(--texte2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .annReste { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 99px; background: rgba(240,180,41,.18); color: #8a6a10; }
+  [data-theme="nuit"] .annReste { background: rgba(240,180,41,.12); color: #f3d98a; }
+  .annPhotoZ { height: 200px; background: var(--champ); border: 1px solid var(--bordure); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 64px; overflow: hidden; margin-top: 12px; }
+  .annPhotoZ img { width: 100%; height: 100%; object-fit: cover; }
+  .annTitreD { font-size: 20px; font-weight: 800; color: var(--texte); margin-top: 12px; line-height: 1.25; }
+  .annPrixD { font-size: 22px; font-weight: 800; color: var(--primaire); margin-top: 4px; }
+  .annDesc { font-size: 14px; color: var(--texte); line-height: 1.55; margin-top: 8px; white-space: pre-wrap; word-break: break-word; }
+  .annVendeur { display: flex; align-items: center; gap: 10px; background: var(--champ); border: 1px solid var(--bordure); border-radius: 12px; padding: 10px 12px; margin-top: 12px; }
+  .annVendeur img, .annVendeur .rond-p { width: 40px; height: 40px; }
+  .annVendeur b { font-size: 14px; color: var(--texte); }
+  .annVendeur small { display: block; font-size: 12px; color: var(--texte2); margin-top: 2px; }
+  .annTiming { text-align: center; font-size: 12px; color: var(--texte2); margin-top: 10px; }
+  .annMsgPre { font-size: 12px; color: var(--texte2); text-align: center; margin-top: 8px; background: var(--champ); border-radius: 8px; padding: 7px 9px; }
   input::placeholder, textarea::placeholder { color: var(--texte2); opacity: 1; }
 </style>
 </head>
@@ -253,7 +290,7 @@
 <div class="card" id="app">Chargement…</div>
 <div id="zonePopup"></div>
 <div id="footer">
-  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v30.4</span>
+  <a id="lienThemes">Thèmes</a><span id="sepContact" style="display:none"> · </span><a id="lienContact" style="display:none">Contact</a><span> · </span><a id="lienDiag">Diagnostic</a><span> · Tsiky v31</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
@@ -969,6 +1006,7 @@ function accueil(profil) {
     <div id="zoneFondateur" style="text-align:center"></div>
     <div class="numero">Ton numéro : ${profil.phone || numeroDepuisCompte()}<br>Donne-le à tes amis pour qu'ils te trouvent</div>
     <button id="btnDisc">Mes discussions <span class="pastille" id="pastilleDisc" style="display:none"></span></button>
+    <button id="btnAnnonces">🛒 Annonces</button>
     <button id="btnNouvelle" class="secondaire">Nouvelle discussion</button>
     <button id="btnInviter">Inviter un ami 🎁</button>
     <button id="btnNotif" class="secondaire">🔔 Notifications</button>
@@ -980,6 +1018,7 @@ function accueil(profil) {
   document.getElementById("btnChangerPseudo").onclick = () => renommerPseudo(profil);
   if (profil.avatar_url) document.getElementById("monAvatar").onclick = () => zoomPhoto(profil.avatar_url);
   btnDisc.onclick = afficherDiscussions;
+  document.getElementById("btnAnnonces").onclick = afficherAnnonces; /* v31 */
   btnNouvelle.onclick = afficherNouveauContact;
   btnInviter.onclick = inviterAmi;
   document.getElementById("btnNotif").onclick = fenetreNotifications; /* v30.4 */
@@ -1065,6 +1104,206 @@ function renommerPseudo(profil) {
     const { data: p } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
     if (p) accueil(p);
   };
+}
+
+/* ---------- v31 : ANNONCES (prélude du Marché) ----------
+   Une annonce : titre, description, prix (facultatif), photo (facultative).
+   GRATUITE, visible 3 JOURS, renouvelable en 1 clic (elle repart pour 3 jours
+   et remonte en haut). Maximum 3 annonces actives par membre — la limite et
+   les dates sont appliquées CÔTÉ SERVEUR (bloc SQL v31). Le bouton « Discuter
+   avec le vendeur » ouvre la conversation Tsiky avec le message déjà écrit :
+   la boucle annonce → chat → rendez-vous au comptoir Cashpoint.
+   NB : la table s'appelle « annonces_tsiky » — « annonces » (sans _tsiky) est
+   la table des BANDEAUX PUBLICITAIRES de l'app, on ne la touche jamais. */
+
+const annEsc = (s) => (s || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function annPrixTxt(p) {
+  return (p === null || p === undefined) ? "À débattre" : new Intl.NumberFormat("fr-FR").format(p) + " Ar";
+}
+function annDureeRestante(expire) {
+  const ms = new Date(expire).getTime() - Date.now();
+  if (ms <= 0) return "expirée";
+  const h = ms / 3600000;
+  if (h < 1) return "1 h restante";
+  if (h < 24) return Math.round(h) + " h restantes";
+  return "reste " + Math.ceil(h / 24) + " j";
+}
+function annDateFr(iso) {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+async function afficherAnnonces() {
+  partenaireActuel = null;
+  app.innerHTML = `
+    <div class="entete"><button class="retour" id="retourAnn">←</button><span class="nom">🛒 Annonces</span></div>
+    <p class="annRegle">Gratuit · visible 3 jours · renouvelable en 1 clic<br>Maximum 3 annonces actives par membre</p>
+    <div id="listeAnn"><p style="color:var(--texte2);font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>
+    <button id="btnPublierAnn">＋ Publier une annonce</button>`;
+  retourAnn.onclick = () => accueil(monProfil);
+  btnPublierAnn.onclick = ecranPublierAnnonce;
+  const cont = document.getElementById("listeAnn");
+  const { data: rows, error } = await sb.from("annonces_tsiky")
+    .select("*").eq("actif", true).gt("expire_le", new Date().toISOString())
+    .order("publie_le", { ascending: false });
+  if (!cont) return;
+  if (error) {
+    cont.innerHTML = `<p style="color:var(--erreur);font-size:14px;text-align:center;margin:20px 0">Impossible de charger les annonces — ${erreurFrancaise(error)}<br>Si l'erreur parle de « table » ou de « fonction », le bloc SQL v31 n'est pas encore collé dans Supabase (demande-le à l'admin).</p>`;
+    return;
+  }
+  const liste = rows || [];
+  if (!liste.length) {
+    cont.innerHTML = `<p style="color:var(--texte2);font-size:14px;text-align:center;margin:20px 0">Aucune annonce pour l'instant.<br>Sois le premier à publier ! 🛒</p>`;
+    return;
+  }
+  const auteurs = [...new Set(liste.map(a => a.auteur_id))];
+  const { data: profs } = await sb.from("profiles").select("id,pseudo,avatar_url").in("id", auteurs);
+  const lesMienes = liste.filter(a => a.auteur_id === user.id).length;
+  cont.innerHTML = "";
+  if (lesMienes) {
+    const bandeau = document.createElement("p");
+    bandeau.className = "annTiming";
+    bandeau.textContent = "Tes annonces actives : " + lesMienes + " / 3";
+    cont.appendChild(bandeau);
+  }
+  liste.forEach(a => {
+    const p = (profs || []).find(x => x.id === a.auteur_id);
+    const div = document.createElement("div");
+    div.className = "annCarte";
+    div.innerHTML = `
+      <div class="ph">${a.photo_url ? `<img src="${a.photo_url}" alt="">` : "🏷️"}</div>
+      <div class="inf">
+        <div class="titre">${annEsc(a.titre)}</div>
+        <div class="prix">${annPrixTxt(a.prix)}</div>
+        <div class="qui">${annEsc(p && p.pseudo) || "Membre Tsiky"}</div>
+      </div>
+      <div class="annReste">${annDureeRestante(a.expire_le)}</div>`;
+    div.onclick = () => afficherAnnonce(a.id);
+    cont.appendChild(div);
+    if (a.photo_url) {
+      const im = div.querySelector("img");
+      if (im) { im.className = "clicPhoto"; im.onclick = (e) => { e.stopPropagation(); zoomPhoto(a.photo_url); }; }
+    }
+  });
+}
+
+function ecranPublierAnnonce() {
+  let fichierPhoto = null;
+  app.innerHTML = `
+    <div class="entete"><button class="retour" id="retourPubAnn">←</button><span class="nom">Publier une annonce</span></div>
+    <label>Titre <span style="font-weight:400;color:var(--texte2)">(3 à 80 caractères)</span></label>
+    <input id="annTitre" maxlength="80" placeholder="Ex : SYM 125 — très bon état">
+    <label>Description <span style="font-weight:400;color:var(--texte2)">(10 à 1000 caractères)</span></label>
+    <textarea id="annDesc" maxlength="1000" placeholder="Décris l'article, son état, où le voir…"></textarea>
+    <label>Prix en Ariary <span style="font-weight:400;color:var(--texte2)">(facultatif — vide = à débattre)</span></label>
+    <input id="annPrix" type="number" min="0" inputmode="numeric" placeholder="Ex : 45000">
+    <label>Photo <span style="font-weight:400;color:var(--texte2)">(facultative)</span></label>
+    <input type="file" id="annPhoto" accept="image/*" hidden>
+    <button id="btnAnnPhoto" class="secondaire">📷 Choisir une photo</button>
+    <div id="annApercu"></div>
+    <p class="annRegle">Gratuit · visible 3 jours · renouvelable en 1 clic<br>Ton pseudo Tsiky est déjà ton nom de vendeur</p>
+    <button id="btnEnvoyerAnn">Publier mon annonce</button>
+    <p class="erreur" id="errAnn"></p>`;
+  retourPubAnn.onclick = afficherAnnonces;
+  const inpPhoto = document.getElementById("annPhoto");
+  document.getElementById("btnAnnPhoto").onclick = () => inpPhoto.click();
+  inpPhoto.onchange = () => {
+    fichierPhoto = inpPhoto.files[0] || null;
+    document.getElementById("annApercu").innerHTML = fichierPhoto
+      ? `<div class="annPhotoZ"><img src="${URL.createObjectURL(fichierPhoto)}" alt=""></div>`
+      : "";
+  };
+  document.getElementById("btnEnvoyerAnn").onclick = async () => {
+    const err = document.getElementById("errAnn");
+    err.textContent = "";
+    const titre = document.getElementById("annTitre").value.trim();
+    const desc = document.getElementById("annDesc").value.trim();
+    const prixBrut = document.getElementById("annPrix").value.trim();
+    const prix = prixBrut === "" ? null : parseInt(prixBrut, 10);
+    if (titre.length < 3) { err.textContent = "Titre : au moins 3 caractères."; return; }
+    if (desc.length < 10) { err.textContent = "Description : au moins 10 caractères."; return; }
+    if (prix !== null && (isNaN(prix) || prix < 0)) { err.textContent = "Prix invalide — écris un montant en Ariary, ou laisse vide."; return; }
+    err.textContent = "Publication…";
+    let photo_url = null;
+    if (fichierPhoto) {
+      err.textContent = "Compression de la photo…";
+      let contenu = null;
+      try { contenu = await compresserImage(fichierPhoto); }
+      catch (e) { err.textContent = erreurFrancaise(e); return; }
+      const chemin = user.id + "/annonce_" + Date.now() + ".jpg";
+      err.textContent = "Envoi de la photo…";
+      const { error: errUp } = await uploaderFiable("fichiers", chemin, contenu, false, (n, s, pct) => { err.textContent = txtEssai("Envoi de la photo…", n, s, pct); });
+      if (errUp) { err.textContent = "Photo : " + erreurFrancaise(errUp); return; }
+      photo_url = sb.storage.from("fichiers").getPublicUrl(chemin).data.publicUrl;
+    }
+    const { data: nouvelId, error: errRpc } = await sb.rpc("publier_annonce_tsiky", {
+      p_titre: titre, p_description: desc, p_prix: prix, p_photo_url: photo_url
+    });
+    if (errRpc) { err.textContent = erreurFrancaise(errRpc); return; }
+    afficherAnnonces();
+  };
+}
+
+async function afficherAnnonce(id) {
+  app.innerHTML = `
+    <div class="entete"><button class="retour" id="retourDetAnn">←</button><span class="nom">Annonce</span></div>
+    <div id="detAnn"><p style="color:var(--texte2);font-size:14px;text-align:center;margin-top:20px">Chargement…</p></div>`;
+  retourDetAnn.onclick = afficherAnnonces;
+  const cont = document.getElementById("detAnn");
+  const { data: a, error } = await sb.from("annonces_tsiky").select("*").eq("id", id).maybeSingle();
+  if (!cont) return;
+  if (error || !a) {
+    cont.innerHTML = `<p style="color:var(--erreur);font-size:14px;text-align:center;margin:20px 0">Annonce introuvable — elle a peut-être été retirée.</p>`;
+    return;
+  }
+  const { data: vendeur } = await sb.from("profiles").select("id,pseudo,avatar_url").eq("id", a.auteur_id).maybeSingle();
+  const laMienne = a.auteur_id === user.id;
+  const expiree = new Date(a.expire_le).getTime() <= Date.now();
+  cont.innerHTML = `
+    <div class="annPhotoZ">${a.photo_url ? `<img src="${a.photo_url}" class="clicPhoto" alt="">` : "🏷️"}</div>
+    <div class="annTitreD">${annEsc(a.titre)}</div>
+    <div class="annPrixD">${annPrixTxt(a.prix)}</div>
+    <div class="annDesc">${annEsc(a.description)}</div>
+    <div class="annVendeur">
+      ${vendeur && vendeur.avatar_url ? `<img src="${vendeur.avatar_url}" class="clicPhoto" id="avVendeur" alt="">` : `<span class="rond-p">${((vendeur && vendeur.pseudo) || "?")[0].toUpperCase()}</span>`}
+      <div><b>${annEsc(vendeur && vendeur.pseudo) || "Membre Tsiky"}</b><small>Vendeur sur Tsiky — contact par le chat</small></div>
+    </div>
+    <p class="annTiming">Publié le ${annDateFr(a.publie_le)} · ${expiree ? "annonce expirée" : "expire le " + annDateFr(a.expire_le)}</p>
+    ${laMienne
+      ? `<button id="btnRenouv">♻️ Renouveler 3 jours</button>
+         <button id="btnRetirer" class="secondaire">Retirer cette annonce</button>
+         <p class="annMsgPre">Renouveler remet le compteur à 3 jours et remonte ton annonce en haut de la liste.</p>`
+      : `<button id="btnDiscuterAnn">💬 Discuter avec le vendeur</button>
+         <p class="annMsgPre">Le message est déjà écrit — tu n'as plus qu'à l'envoyer.</p>`}
+    <p class="erreur" id="errDetAnn"></p>`;
+  if (a.photo_url) {
+    const im = cont.querySelector(".annPhotoZ img");
+    if (im) im.onclick = () => zoomPhoto(a.photo_url);
+  }
+  const err = document.getElementById("errDetAnn");
+  if (!laMienne) {
+    document.getElementById("btnDiscuterAnn").onclick = async () => {
+      err.textContent = "";
+      if (!vendeur) { err.textContent = "Le vendeur n'a plus de profil actif."; return; }
+      err.textContent = "Ouverture de la discussion…";
+      await ouvrirConversation(vendeur);
+      const t = document.getElementById("txtMsg");
+      if (t) t.value = "Salama ! Je suis intéressé par ton annonce : « " + a.titre + " ». Elle est encore disponible ?";
+    };
+  } else {
+    document.getElementById("btnRenouv").onclick = async () => {
+      err.textContent = "Renouvellement…";
+      const { error: errRpc } = await sb.rpc("renouveler_annonce_tsiky", { p_id: a.id });
+      if (errRpc) { err.textContent = erreurFrancaise(errRpc); return; }
+      afficherAnnonce(a.id);
+    };
+    document.getElementById("btnRetirer").onclick = async () => {
+      if (!confirm("Retirer « " + a.titre + " » ? Personne ne la verra plus.")) return;
+      err.textContent = "Retrait…";
+      const { error: errSup } = await sb.from("annonces_tsiky").delete().eq("id", a.id);
+      if (errSup) { err.textContent = erreurFrancaise(errSup); return; }
+      afficherAnnonces();
+    };
+  }
 }
 
 /* ---------- Partager Tsiky (QR code) ---------- */
